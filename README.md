@@ -27,28 +27,19 @@ project, a main.tex and a .justfile for compile.
 - Just
 - Zathura
 - plenary.nvim
-- fidget.nvim (opcional)
 
 ## Install
 
 Para instalar puedes usar el plugin manager que prefieras. El siguiente ejemplo
-es con [lazy.nvim](https://github.com/folke/lazy.nvim) y depende opcionalmente
-de [fidget.nvim](https://github.com/j-hui/fidget.nvim) para conocer el status
-de la compilación. Si no se cuenta con fidget, vim.notify se usará en su lugar.
+es con [lazy.nvim](https://github.com/folke/lazy.nvim).
 
 To install you can use the plugin manager you prefer. The following example is
-with [lazy.nvim](https://github.com/folke/lazy.nvim) and depends optionally on
-[fidget.nvim](https://github.com/j-hui/fidget.nvim) to know the status of
-compilation. If you do not have fidget, vim.Notify will be used instead.
+with [lazy.nvim](https://github.com/folke/lazy.nvim).
 
 ```lua
 {
   "frvnzj/xJUSTEXx.nvim",
   dependencies = {
-    {
-      "j-hui/fidget.nvim",
-      opts = {},
-    },
     {
       "nvim-lua/plenary.nvim"
     },
@@ -71,13 +62,29 @@ compilation. If you do not have fidget, vim.Notify will be used instead.
     end,
   },
   {
-    "j-hui/fidget.nvim",
-    opts = {},
-    ft = { "tex", "plaintex" },
+    "folke/noice.nvim",
+    opts = {
+      routes = {
+        {
+          filter = {
+            event = "msg_show",
+            kind = "progress",
+          },
+          view = "mini",
+          opts = {
+            replace = true,
+          },
+        },
+      },
+    },
   },
 }
 
 ```
+
+> [NOTE!]
+> Para mostrar el progreso de la compilación usé nvim_echo().
+> To show the build progress I used nvim_echo().
 
 ## Configuration
 
@@ -203,7 +210,6 @@ xJUSTEXx ofrece siete comandos:
 - **JustexCompile**: compila utilizando optativamente LuaLaTeX, pdfLaTeX o
   XeLaTeX (dependiendo de tu `justfile_content`) con la ayuda/dependencia de
   [Just](https://github.com/casey/just).
-
   - `:JustexCompile lualatex`
   - `:JustexCompile pdflatex`
   - `:JustexCompile pdfxe`
@@ -252,7 +258,6 @@ xJUSTEXx offers seven commands:
 - **JustexCompile**: Compila using optionally LuaLaTeX, pdfLaTeX or XeLaTeX
   (depending on your `justfile_content`) with
   [Just's](https://github.com/casey/just) help.
-
   - `:JustexCompile lualatex`
   - `:JustexCompile pdflatex`
   - `:JustexCompile pdfxe`

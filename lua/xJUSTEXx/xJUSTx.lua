@@ -23,9 +23,10 @@ function M.xCOMPILEx(command)
 
   local message_id = "xJUSTEXx"
 
-  vim.api.nvim_echo({ { "Compiling " .. file_name .. "...", "none" } }, false, {
+  vim.api.nvim_echo({ { "Compiling " .. file_name .. "...", "None" } }, false, {
     id = message_id,
     kind = "progress",
+    source = "xJUSTEXx",
     title = "Just: " .. command,
     status = "running",
     percent = 0,
@@ -42,8 +43,9 @@ function M.xCOMPILEx(command)
         vim.api.nvim_echo({ { message .. "...", "None" } }, false, {
           id = message_id,
           kind = "progress",
+          source = "xJUSTEXx",
           status = "running",
-          percent = 60,
+          percent = 0,
         })
       end
     end,
@@ -53,6 +55,7 @@ function M.xCOMPILEx(command)
         vim.api.nvim_echo({ { "Processing with warnings...", "WarningMsg" } }, false, {
           id = message_id,
           kind = "progress",
+          source = "xJUSTEXx",
           status = "running",
           percent = 50,
         })
@@ -64,6 +67,7 @@ function M.xCOMPILEx(command)
         vim.api.nvim_echo({ { "Compilation finished successfully!", "MoreMsg" } }, true, {
           id = message_id,
           kind = "progress",
+          source = "xJUSTEXx",
           status = "success",
           percent = 100,
         })
@@ -71,6 +75,7 @@ function M.xCOMPILEx(command)
         vim.api.nvim_echo({ { "Compilation failed! Exit code: " .. code, "ErrorMsg" } }, true, {
           id = message_id,
           kind = "progress",
+          source = "xJUSTEXx",
           status = "failed",
           percent = 100,
         })

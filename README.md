@@ -82,7 +82,7 @@ with [lazy.nvim](https://github.com/folke/lazy.nvim).
 
 ```
 
-> [NOTE!]
+> 🗒️
 > Para mostrar el progreso de la compilación usé nvim_echo().
 > To show the build progress I used nvim_echo().
 
@@ -221,7 +221,8 @@ xJUSTEXx ofrece siete comandos:
   navegador y los archivos de texto en Neovim, estos últimos se descargarán al
   caché, `stdpath('cache')`.
 
-- **JustexDoc**: abre la documentación del package bajo el cursor con el uso de texdoc.
+- **JustexDoc**: abre la documentación del package bajo el cursor con el uso de
+  texdoc.
 
 - **JustexLog**: abre el logfile para visualizar errores (requiere pplatex).
 
@@ -229,7 +230,7 @@ xJUSTEXx ofrece siete comandos:
   refs.bib, que se creará automáticamente en el directorio raíz del proyecto, al
   confirmar la entrada.
 
-  > [!IMPORTANT]
+  > ❕
   > Para buscar las referencias bibliográficas, el plugin hace uso del api de
   > Open Library, por lo que algunas referencias pueden no ser encontradas o
   > algunos campos pueden estar vacíos y tendrán que definirse manualmente. Por
@@ -239,7 +240,7 @@ xJUSTEXx ofrece siete comandos:
   versatilidad este comando gracias a su API y por el mismo índice de revistas
   académicas.
 
-  > [!IMPORTANT]
+  > ❕
   > Comienza por hacer la búsqueda de la revista académica, ya sea por palabras
   > clave o por el ISSN; después, busca artículos por palabras clave. Del
   > artículo seleccionado podrás agregar la referencia en formato biblatex en el
@@ -278,7 +279,7 @@ xJUSTEXx offers seven commands:
   refs.bib file, which will be automatically created in the root directory of the
   project, confirming the entrance.
 
-  > [!IMPORTANT]
+  > ❕
   > To look for bibliographic references, the plugin makes use of the Open
   > Library API, so some references may not be found or some fields may be
   > empty and will have to be defined manually. For now it only looks for book
@@ -288,7 +289,7 @@ xJUSTEXx offers seven commands:
   has greater versatility thanks to its API and the same index of academic
   magazines.
 
-  > [!IMPORTANT]
+  > ❕
   > It begins by searching the academic magazine, either by keywords or by the
   > ISSN; Then, look for articles by keywords. From the selected article you can
   > add the reference in the Bibliatex format in the refs.bib file (it will be

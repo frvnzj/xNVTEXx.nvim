@@ -27,6 +27,10 @@ end, {
   complete = complete_justex,
 })
 
+vim.api.nvim_create_user_command("JustexCancelComp", function()
+  xJUSTEXx.xCANCELx()
+end, {})
+
 vim.api.nvim_create_user_command("JustexDoc", function()
   xJUSTEXx.xTEXDOCx()
 end, {})

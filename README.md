@@ -202,7 +202,7 @@ cleanall:
 
 ![JustexSearchJournal](assets/JustexSearchJournal.png)
 
-xJUSTEXx ofrece siete comandos:
+xJUSTEXx ofrece ocho comandos:
 
 - **JustexNewProject**: crea un proyecto nuevo (directorio del proyecto,
   repositorio Git y tex file con el nombre del proyecto).
@@ -215,6 +215,8 @@ xJUSTEXx ofrece siete comandos:
   - `:JustexCompile pdfxe`
   - `:JustexCompile cleanmain`
   - `:JustexCompile cleanall`
+
+- **JustexCancelComp**: cancela la compilación cuando lo creas necesario.
 
 - **JustexSearchCTAN**: enlista todos los paquetes de CTAN para buscar
   documentación. Los PDF's se abrirán en Zathura, la documentación HTMl en el
@@ -251,7 +253,7 @@ xJUSTEXx ofrece siete comandos:
 
 ---
 
-xJUSTEXx offers seven commands:
+xJUSTEXx offers eight commands:
 
 - **JustexNewProject**: Create a new project (Project Board, Git repository and
   Tex File with the name of the project).
@@ -264,6 +266,8 @@ xJUSTEXx offers seven commands:
   - `:JustexCompile pdfxe`
   - `:JustexCompile cleanmain`
   - `:JustexCompile cleanall`
+
+- **JustexCancelComp**: cancel the compilation when you think it is necessary.
 
 - **JustexSearchCTAN**: List all CTAN packages to search for documentation. The
   PDF's will open in Zathura, the HTML documentation in the browser and the text

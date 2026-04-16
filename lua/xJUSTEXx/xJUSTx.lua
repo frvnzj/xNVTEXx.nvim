@@ -6,8 +6,12 @@ local state = {
   cancelled = false,
 }
 
+---@param msg string
+---@param level string
+---@param status string
+---@param percent integer
 local function update_progress(msg, level, status, percent)
-  vim.api.nvim_echo({ { msg, level } }, false, {
+  pcall(vim.api.nvim_echo, { { msg, level } }, false, {
     id = state.message_id,
     kind = "progress",
     source = "xJUSTEXx",
@@ -16,14 +20,15 @@ local function update_progress(msg, level, status, percent)
   })
 end
 
+---@return string|nil
 local function get_main_file_name()
-  local justfile_path = vim.fs.find(".justfile", { upward = true, stop = vim.uv.os_homedir() })[1]
+  local justfile_paths = vim.fs.find(".justfile", { upward = true, stop = vim.uv.os_homedir() })
 
-  if not justfile_path then
+  if not justfile_paths or #justfile_paths == 0 then
     return nil
   end
 
-  local file = io.open(justfile_path, "r")
+  local file = io.open(justfile_paths[1], "r")
 
   if not file then
     return nil
@@ -50,14 +55,15 @@ function M.xCOMPILEx(command)
 
   local cmd = { "just", command }
   local file_name = get_main_file_name() or vim.fn.expand("%:t")
-  local justfile_dir = vim.fs.dirname(vim.fs.find(".justfile", { upward = true, stop = vim.uv.os_homedir() })[1])
+  local justfile_paths = vim.fs.find(".justfile", { upward = true, stop = vim.uv.os_homedir() })
+  local justfile_dir = justfile_paths and #justfile_paths > 0 and vim.fs.dirname(justfile_paths[1])
+    or nil
   local cwd = justfile_dir or vim.fn.expand("%:p:h")
 
   state.cancelled = false
 
   update_progress("Compiling " .. file_name .. "...", "None", "running", 0)
 
-  --TODO: Tal vez parsear la salida de latexmk
   state.job_id = vim.fn.jobstart(cmd, {
     cwd = cwd,
     stdout_buffered = false,
@@ -99,7 +105,8 @@ end
 function M.xCANCELx()
   if state.job_id then
     state.cancelled = true
-    vim.fn.jobstop(state.job_id)
+
+    pcall(vim.fn.jobstop, state.job_id)
 
     update_progress("Compilation cancelled", "WarningMsg", "cancel", 100)
     state.job_id = nil

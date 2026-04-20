@@ -1,20 +1,10 @@
 local M = {}
 
-local function ensure_dir_exists(dir)
-  if vim.fn.isdirectory(dir) == 0 then
-    vim.fn.mkdir(dir, "p")
-  end
-end
-
-local function expand_path(path)
-  return path:gsub("^~", vim.fn.expand("~"))
-end
-
 local function set_default_config()
   return {
     project_dirs = {
-      vim.fn.expand("$HOME") .. "/Documents/xJUSTEXx/Articles",
-      vim.fn.expand("$HOME") .. "/Documents/xJUSTEXx/Research",
+      vim.fs.normalize("~/Documents/xJUSTEXx/Articles"),
+      vim.fs.normalize("~/Documents/xJUSTEXx/Research"),
     },
     tex_templates = {
       article = {
@@ -22,12 +12,11 @@ local function set_default_config()
         content = [[
 \documentclass{article}
 
-
-\begin{document}
-
 \title{Title}
 \author{Author}
 \date{\today}
+
+\begin{document}
 \maketitle
 
 
@@ -37,19 +26,18 @@ This is an article template.
 
 
 \end{document}
-      ]],
+]],
       },
       book = {
         name = "Book",
         content = [[
 \documentclass{book}
 
-
-\begin{document}
-
 \title{Title}
 \author{Author}
 \date{\today}
+
+\begin{document}
 \maketitle
 
 
@@ -59,20 +47,19 @@ This is a book template.
 
 
 \end{document}
-      ]],
+]],
       },
       presentation = {
         name = "Presentation",
         content = [[
 \documentclass{beamer}
 
-
-\begin{document}
 \title{Title}
 \author{Author}
 \date{\today}
-\frame{\titlepage}
 
+\begin{document}
+\frame{\titlepage}
 
 \begin{frame}
 \frametitle{Introduction}
@@ -83,7 +70,7 @@ This is a presentation template.
 
 
 \end{document}
-      ]],
+]],
       },
     },
     justfile_content = [[
@@ -110,19 +97,15 @@ end
 M.options = {}
 
 function M.setup(opts)
+  local defaults = set_default_config()
+
   if opts and opts.project_dirs then
     for i, dir in ipairs(opts.project_dirs) do
-      opts.project_dirs[i] = expand_path(dir)
+      opts.project_dirs[i] = vim.fs.normalize(dir)
     end
   end
 
-  M.options = vim.tbl_deep_extend("force", set_default_config(), opts or {})
-
-  if not opts or not opts.project_dirs then
-    for _, dir in ipairs(M.options.project_dirs) do
-      ensure_dir_exists(dir)
-    end
-  end
+  M.options = vim.tbl_deep_extend("force", defaults, opts or {})
 end
 
 function M.set_file_justfile(project_name)

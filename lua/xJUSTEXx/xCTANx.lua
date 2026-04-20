@@ -1,19 +1,26 @@
 local M = {}
 
-local curl = require("plenary.curl")
 local ctan_mirror = "https://mirrors.mit.edu/CTAN"
 
-local function build_full_url(doc_path)
-  return ctan_mirror .. "/" .. doc_path:gsub("^ctan:", ""):gsub("^/+", ""):gsub(" ", "%%20")
+local function notify(msg, level)
+  vim.notify("xCTANx: " .. msg, level or vim.log.levels.INFO)
 end
 
-local function fetch_json(url)
-  local response = curl.get(url)
-  if not response or response.status ~= 200 then
-    vim.notify("Error fetching data: " .. url, vim.log.levels.ERROR)
-    return nil
-  end
-  return vim.fn.json_decode(response.body)
+local function http_get(url, cb)
+  vim.system({ "curl", "-sSL", url }, { text = true }, function(obj)
+    vim.schedule(function()
+      if obj.code ~= 0 then
+        cb(nil, "Error fetching data: " .. obj.code)
+      else
+        cb(obj.stdout, nil)
+      end
+    end)
+  end)
+end
+
+local function build_full_url(doc_path)
+  local clean_path = doc_path:gsub("^ctan:", ""):gsub("^/+", "")
+  return ctan_mirror .. "/" .. clean_path:gsub(" ", "%%20")
 end
 
 local function open_document(url, path)
@@ -21,76 +28,100 @@ local function open_document(url, path)
   local is_readme = path:match("README")
 
   if ext == "pdf" then
-    vim.fn.jobstart({ "zathura", url }, { detach = true })
-    vim.notify("URL: " .. url, vim.log.levels.INFO)
+    notify("Abriendo PDF con Zathura...")
+    vim.system({ "zathura", url }, { detach = true })
   elseif ext == "html" then
-    vim.fn.jobstart({ "xdg-open", url }, { detach = true })
+    notify("Abriendo en navegador...")
+    vim.system({ "xdg-open", url }, { detach = true })
   elseif ext == "md" or ext == "txt" or is_readme then
     local tmp_dir = vim.fn.stdpath("cache") .. "/ctan_docs/"
     local filename = path:match("([^/]+)$"):gsub("%%20", "_")
+    if not filename:match("%.") then
+      filename = filename .. ".txt"
+    end
     local tmp_file = tmp_dir .. filename
 
-    if not filename:match("%.") then
-      tmp_file = tmp_file .. ".txt"
-    end
-
     vim.fn.mkdir(tmp_dir, "p")
-    vim.fn.system(string.format('curl -sSL -o "%s" "%s"', tmp_file, url))
+    notify("Descargando documento...")
 
-    if vim.fn.filereadable(tmp_file) == 1 then
+    vim.system({ "curl", "-sSL", "-o", tmp_file, url }, {}, function(obj)
       vim.schedule(function()
-        vim.cmd("view " .. vim.fn.fnameescape(tmp_file))
+        if obj.code == 0 and vim.fn.filereadable(tmp_file) == 1 then
+          vim.cmd("view " .. vim.fn.fnameescape(tmp_file))
+        else
+          notify("Error al descargar: " .. url, vim.log.levels.ERROR)
+        end
       end)
-    else
-      vim.notify("Error downloading: " .. url, vim.log.levels.ERROR)
-    end
+    end)
   else
-    vim.notify("Format not supported: " .. ext, vim.log.levels.WARN)
+    notify("Formato no soportado: " .. ext, vim.log.levels.WARN)
   end
 end
 
 function M.xCTANSEARCHx()
-  local packages = fetch_json("https://www.ctan.org/json/2.0/packages")
-  if not packages then
-    return
-  end
+  notify("Obteniendo lista de paquetes...")
 
-  local package_list = vim.tbl_map(function(pkg)
-    return { display = string.format("%s - %s", pkg.key, pkg.caption), key = pkg.key }
-  end, packages)
-
-  vim.ui.select(package_list, {
-    prompt = "Package  > ",
-    format_item = function(item)
-      return " " .. item.display
-    end,
-  }, function(selected)
-    if not selected then
-      return
+  http_get("https://www.ctan.org/json/2.0/packages", function(body, err)
+    if err or not body then
+      return notify(err or "No body", vim.log.levels.ERROR)
     end
 
-    local pkg_data = fetch_json("https://www.ctan.org/json/2.0/pkg/" .. selected.key)
-    if not pkg_data or not pkg_data.documentation then
-      return
+    local ok, packages = pcall(vim.fn.json_decode, body)
+    if not ok then
+      return notify("Error decodificando JSON", vim.log.levels.ERROR)
     end
 
-    local doc_list = vim.tbl_map(function(doc)
-      return { display = string.format("%s - %s", doc.details, doc.href), href = doc.href }
-    end, pkg_data.documentation)
+    local package_list = {}
+    for _, pkg in ipairs(packages) do
+      table.insert(package_list, {
+        display = string.format("%s - %s", pkg.key, pkg.caption or "Sin descripción"),
+        key = pkg.key,
+      })
+    end
 
-    vim.ui.select(doc_list, {
-      prompt = selected.key .. " Docs  > ",
+    vim.ui.select(package_list, {
+      prompt = "Package  > ",
       format_item = function(item)
-        local icons = { pdf = "󰈦 ", md = " ", html = " ", txt = "󰈙 " }
-        local ext = item.href:match("%.([%a%d]+)$") or ""
-        return (icons[ext] or "󰈙 ") .. item.display
+        return " " .. item.display
       end,
-    }, function(doc_selected)
-      if not doc_selected then
+    }, function(selected)
+      if not selected then
         return
       end
 
-      open_document(build_full_url(doc_selected.href), doc_selected.href)
+      notify("Buscando documentación...")
+      http_get("https://www.ctan.org/json/2.0/pkg/" .. selected.key, function(p_body, p_err)
+        if p_err or not p_body then
+          return notify("Error al obtener detalles: " .. (p_err or "vacío"), vim.log.levels.ERROR)
+        end
+
+        local p_ok, pkg_data = pcall(vim.fn.json_decode, p_body)
+        if not p_ok or not pkg_data.documentation then
+          return notify("No hay documentación disponible", vim.log.levels.WARN)
+        end
+
+        local doc_list = {}
+        for _, doc in ipairs(pkg_data.documentation) do
+          table.insert(doc_list, {
+            display = string.format("%s - %s", doc.details or "Doc", doc.href),
+            href = doc.href,
+          })
+        end
+
+        vim.ui.select(doc_list, {
+          prompt = selected.key .. " Docs  > ",
+          format_item = function(item)
+            local icons = { pdf = "󰈦 ", md = " ", html = " ", txt = "󰈙 " }
+            local ext = item.href:match("%.([%a%d]+)$") or ""
+            return (icons[ext] or "󰈙 ") .. item.display
+          end,
+        }, function(doc_selected)
+          if not doc_selected then
+            return
+          end
+          open_document(build_full_url(doc_selected.href), doc_selected.href)
+        end)
+      end)
     end)
   end)
 end

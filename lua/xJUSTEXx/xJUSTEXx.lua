@@ -2,11 +2,11 @@ local M = {}
 
 local config = require("xJUSTEXx.config")
 
-local function join(...)
-  return vim.fs.joinpath(...)
+local function notify(msg, level)
+  vim.notify("xJUSTEXx: " .. msg, level or vim.log.levels.INFO)
 end
 
-local function remove_accents(str)
+local function sanitize_project_name(str)
   local accents = {
     ["á"] = "a",
     ["é"] = "e",
@@ -25,20 +25,12 @@ local function remove_accents(str)
   return sanitized:gsub("%s+", "_"):gsub('[/\\:%*%?"<>|]', "")
 end
 
-local function safe_execute(fn, error_msg)
-  local success, err = pcall(fn)
-  if not success then
-    vim.notify(error_msg .. ": " .. tostring(err), vim.log.levels.ERROR)
-  end
-  return success
-end
+local function create_floating_window(title, content)
+  local buf = vim.api.nvim_create_buf(false, true)
+  local width = math.floor(vim.o.columns * 0.8)
+  local height = math.floor(vim.o.lines * 0.8)
 
-local function schedule(fn)
-  vim.schedule(fn)
-end
-
-local function get_window_config(width, height)
-  return {
+  local win_config = {
     relative = "editor",
     width = width,
     height = height,
@@ -46,16 +38,9 @@ local function get_window_config(width, height)
     col = math.floor((vim.o.columns - width) / 2),
     style = "minimal",
     border = "rounded",
+    title = " " .. title .. " ",
+    title_pos = "center",
   }
-end
-
-local function create_floating_window(title, content)
-  local buf = vim.api.nvim_create_buf(false, true)
-  local width = math.floor(vim.o.columns * 0.8)
-  local height = math.floor(vim.o.lines * 0.8)
-
-  local win_config = get_window_config(width, height)
-  win_config.title = title
 
   local win = vim.api.nvim_open_win(buf, true, win_config)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, content)
@@ -68,87 +53,70 @@ local function create_floating_window(title, content)
   return buf, win
 end
 
-local function validate_and_create_directory(project_path)
+local function prepare_directory(project_path)
   local stat = vim.uv.fs_stat(project_path)
 
-  if stat and stat.type == "directory" then
+  if stat then
     local confirm = vim.fn.confirm("Overwrite existing project?", "&Yes\n&No", 2)
     if confirm ~= 1 then
       return false
     end
-    if
-      not safe_execute(function()
-        vim.fn.delete(project_path, "rf")
-      end, "Failed to remove existing directory")
-    then
+
+    local ok = pcall(vim.fn.delete, project_path, "rf")
+    if not ok then
+      notify("Failed to remove existing directory", vim.log.levels.ERROR)
       return false
     end
-
-    return safe_execute(function()
-      vim.fn.mkdir(project_path, "p")
-    end, "Failed to create project directory")
   end
 
-  return safe_execute(function()
-    vim.fn.mkdir(project_path, "p")
-  end, "Failed to create project directory")
-end
+  local ok = pcall(vim.fn.mkdir, project_path, "rf")
+  if not ok then
+    notify("Failed to create project directory", vim.log.levels.ERROR)
+    return false
+  end
 
-local function init_git_repo(project_path, callback)
-  vim.system({ "git", "init" }, { cwd = project_path }, function(obj)
-    if obj.code ~= 0 then
-      schedule(function()
-        vim.notify("Git initialization warning", vim.log.levels.WARN)
-      end)
-    else
-      schedule(function()
-        if callback then
-          callback()
-        end
-      end)
-    end
-  end)
+  return true
 end
 
 local function create_project_files(project_path, project_name, template_content)
-  local main_tex = join(project_path, project_name .. ".tex")
-  local justfile = join(project_path, ".justfile")
+  local main_tex = vim.fs.joinpath(project_path, project_name .. ".tex")
+  local justfile = vim.fs.joinpath(project_path, ".justfile")
 
-  safe_execute(function()
-    vim.fn.writefile(vim.split(template_content, "\n"), main_tex)
-  end, "Failed to create main .tex file")
+  vim.fn.writefile(vim.split(template_content, "\n"), main_tex)
 
-  safe_execute(function()
-    local justfile_content = config.set_file_justfile(project_name)
-    vim.fn.writefile(vim.split(justfile_content, "\n"), justfile)
-  end, "Failed to create .justfile")
+  local justfile_content = config.set_file_justfile(project_name)
+  vim.fn.writefile(vim.split(justfile_content, "\n"), justfile)
 
   return main_tex
 end
 
 --- Function to set up the project directory and files
----@param project_name string: Name of the project
----@param project_dir string: Directory where the project will be created
----@param template_content string: Content of the template to use
-local function setup_project(project_name, project_dir, template_content)
-  local correct_name = remove_accents(project_name)
+---@param name string: Name of the project
+---@param dir string: Directory where the project will be created
+---@param template string: Content of the template to use
+local function setup_project(name, dir, template)
+  local clean_name = sanitize_project_name(name)
+  if clean_name == "" then
+    return notify("Invalid project name", vim.log.levels.ERROR)
+  end
 
-  if correct_name == "" then
-    vim.notify("Invalid project name", vim.log.levels.ERROR)
+  local project_path = vim.fs.joinpath(dir, clean_name)
+
+  if not prepare_directory(project_path) then
     return
   end
 
-  local project_path = join(project_dir, correct_name)
+  vim.system({ "git", "init" }, { cwd = project_path }, function(obj)
+    vim.schedule(function()
+      if obj.code ~= 0 then
+        notify("Can't initialize Git", vim.log.levels.ERROR)
+      end
 
-  if not validate_and_create_directory(project_path) then
-    return
-  end
+      local main_tex = create_project_files(project_path, clean_name, template)
 
-  init_git_repo(project_path, function()
-    local main_tex = create_project_files(project_path, correct_name, template_content)
-
-    vim.cmd("edit " .. vim.fn.fnameescape(main_tex))
-    vim.notify("Project  " .. correct_name .. " ready!", vim.log.levels.INFO)
+      vim.cmd("edit " .. vim.fn.fnameescape(main_tex))
+      vim.notify("Project  " .. clean_name .. " ready!")
+    end)
   end)
 end
 
@@ -162,7 +130,7 @@ function M.xNEW_PROJECTx()
     return
   end
 
-  local function select_template(selected_dir)
+  local function start_wizard(selected_dir)
     vim.ui.select(vim.tbl_keys(templates), {
       prompt = "Select Template:",
       format_item = function(key)
@@ -182,25 +150,25 @@ function M.xNEW_PROJECTx()
   end
 
   if #dirs == 1 then
-    select_template(dirs[1])
+    start_wizard(dirs[1])
   else
-    vim.ui.select(dirs, { prompt = "Select Directory:" }, select_template)
+    vim.ui.select(dirs, { prompt = "Select Directory:" }, start_wizard)
   end
 end
 
 --- Function to open LaTeX documentation for the word under the cursor
 function M.xTEXDOCx()
   local package = vim.fn.expand("<cword>")
-
   if package == "" then
-    vim.notify("No package selected", vim.log.levels.WARN)
     return
   end
 
+  notify("Looking doc for " .. package .. "...")
+
   vim.system({ "texdoc", package }, {}, function(obj)
     if obj.code ~= 0 then
-      schedule(function()
-        vim.notify("No doc found for '" .. package .. "'", vim.log.levels.WARN)
+      vim.schedule(function()
+        notify("No doc found for '" .. package .. "'", vim.log.levels.WARN)
       end)
     end
   end)
@@ -211,15 +179,13 @@ function M.xPPLATEXx()
   local log_file = vim.fn.expand("%:p:r") .. ".log"
 
   if vim.fn.filereadable(log_file) == 0 then
-    vim.notify("Log file not found", vim.log.levels.WARN)
-    return
+    return notify("Log file not found", vim.log.levels.WARN)
   end
 
   vim.system({ "pplatex", "-i", log_file }, { text = true }, function(obj)
-    schedule(function()
-      if obj.code ~= 0 and obj.stdout == "" then
-        vim.notify("pplatex failed", vim.log.levels.ERROR)
-        return
+    vim.schedule(function()
+      if obj.code ~= 0 and (not obj.stdout or obj.stdout == "") then
+        return notify("pplatex failed", vim.log.levels.ERROR)
       end
 
       local lines = vim.split(obj.stdout, "\n")

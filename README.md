@@ -22,11 +22,12 @@ project, a main.tex and a .justfile for compile.
 
 ## Dependencias
 
-- Neovim >= 0.10
+- Neovim >= 0.12
 - Git
 - Just
 - Zathura
-- plenary.nvim
+- Curl
+- ¡Obviamente TeXlive!
 
 ## Install
 
@@ -39,11 +40,6 @@ with [lazy.nvim](https://github.com/folke/lazy.nvim).
 ```lua
 {
   "frvnzj/xJUSTEXx.nvim",
-  dependencies = {
-    {
-      "nvim-lua/plenary.nvim"
-    },
-  },
   config = function()
     require("xJUSTEXx").setup()
   end,
@@ -54,9 +50,6 @@ with [lazy.nvim](https://github.com/folke/lazy.nvim).
 {
   {
     "frvnzj/xJUSTEXx.nvim",
-    dependencies = {
-      "nvim-lua/plenary.nvim"
-    },
     config = function()
       require("xJUSTEXx").setup()
     end,
@@ -100,8 +93,8 @@ setup is:
 ```lua
 {
   project_dirs = {
-    vim.fn.expand('$HOME') .. '/Documents/xJUSTEXx/Articles',
-    vim.fn.expand('$HOME') .. '/Documents/xJUSTEXx/Research',
+    vim.fs.normalize("~/Documents/xJUSTEXx/Articles"),
+    vim.fs.normalize("~/Documents/xJUSTEXx/Research"),
   },
   tex_templates = {
     article = {

@@ -6,6 +6,39 @@ local state = {
   cancelled = false,
 }
 
+local command_meta = {
+  lualatex = {
+    start = "xJUSTEXx with LuaLaTeX: ",
+    success = "✓ LuaLaTeX: Success",
+    icon = "󰚔",
+  },
+  pdflatex = {
+    start = "xJUSTEXx with PDFLaTeX: ",
+    success = "✓ PDFLaTeX: Success",
+    icon = "󰚔",
+  },
+  pdfxe = {
+    start = "xJUSTEXx with XeLaTeX: ",
+    success = "✓ XeLaTeX: Success",
+    icon = "󰚔",
+  },
+  cleanmain = {
+    start = "Cleaning proyect: ",
+    success = "✓ Clean project",
+    icon = "󰃢",
+  },
+  cleanall = {
+    start = "Total cleaning of temporary",
+    success = "✓ Erased temporary",
+    icon = "󰃢",
+  },
+  default = {
+    start = "Running xJUSTEXx: ",
+    success = "✓ Just finished",
+    icon = "󱁤",
+  },
+}
+
 ---@param msg string
 ---@param level string
 ---@param status string
@@ -22,27 +55,19 @@ end
 
 ---@return string|nil
 local function get_main_file_name()
-  local justfile_paths = vim.fs.find(".justfile", { upward = true, stop = vim.uv.os_homedir() })
-
-  if not justfile_paths or #justfile_paths == 0 then
+  local root = vim.fs.find(".justfile", { upward = true, stop = vim.uv.os_homedir() })[1]
+  if not root then
     return nil
   end
 
-  local file = io.open(justfile_paths[1], "r")
-
-  if not file then
-    return nil
-  end
-
-  local main_file = nil
-  for line in file:lines() do
-    main_file = line:match('main_file%s*:=%s*"([^"]+)"')
+  local lines = vim.fn.readfile(root)
+  for _, line in ipairs(lines) do
+    local main_file = line:match('main_file%s*:=%s*"([^"]+)"')
     if main_file then
-      break
+      return main_file
     end
   end
-  file:close()
-  return main_file
+  return nil
 end
 
 --- Function to execute a "just" command with progress reporting
@@ -53,18 +78,16 @@ function M.xCOMPILEx(command)
     return
   end
 
-  local cmd = { "just", command }
-  local file_name = get_main_file_name() or vim.fn.expand("%:t")
+  local meta = command_meta[command] or command_meta.default
+  local main_file = get_main_file_name() or vim.fn.expand("%:t")
+  local target_display = (command == "cleanall") and "" or main_file
   local justfile_paths = vim.fs.find(".justfile", { upward = true, stop = vim.uv.os_homedir() })
-  local justfile_dir = justfile_paths and #justfile_paths > 0 and vim.fs.dirname(justfile_paths[1])
-    or nil
-  local cwd = justfile_dir or vim.fn.expand("%:p:h")
+  local cwd = (#justfile_paths > 0) and vim.fs.dirname(justfile_paths[1]) or vim.fn.expand("%:p:h")
 
   state.cancelled = false
+  update_progress(meta.icon .. " " .. meta.start .. target_display, "None", "running", 10)
 
-  update_progress("Compiling " .. file_name .. "...", "None", "running", 0)
-
-  state.job_id = vim.fn.jobstart(cmd, {
+  state.job_id = vim.fn.jobstart({ "just", command }, {
     cwd = cwd,
     stdout_buffered = false,
 
@@ -73,7 +96,7 @@ function M.xCOMPILEx(command)
         return
       end
 
-      update_progress("xJUSTEXx: " .. file_name .. "...", "None", "running", 30)
+      update_progress(meta.icon .. " xJUSTEXx: " .. command .. "...", "None", "running", 40)
     end,
 
     on_stderr = function(_, data)
@@ -81,22 +104,23 @@ function M.xCOMPILEx(command)
         return
       end
 
-      update_progress("Processing with warnings...", "WarningMsg", "running", 60)
+      if not command:find("clean") then
+        update_progress("Processing with warnings...", "WarningMsg", "running", 70)
+      end
     end,
 
     on_exit = function(_, code)
       local was_cancelled = state.cancelled
       state.job_id = nil
-      state.cancelled = false
 
       if was_cancelled then
         return
       end
 
       if code == 0 then
-        update_progress("Compilation finished!", "MoreMsg", "success", 100)
+        update_progress(meta.icon .. " " .. meta.success, "MoreMsg", "success", 100)
       else
-        update_progress("Compilation failed! (Code " .. code .. ")", "ErrorMsg", "failed", 100)
+        update_progress("Failed " .. command .. " (Code " .. code .. ")", "ErrorMsg", "failed", 100)
       end
     end,
   })
@@ -105,11 +129,9 @@ end
 function M.xCANCELx()
   if state.job_id then
     state.cancelled = true
-
-    pcall(vim.fn.jobstop, state.job_id)
-
-    update_progress("Compilation cancelled", "WarningMsg", "cancel", 100)
+    vim.fn.jobstop(state.job_id)
     state.job_id = nil
+    update_progress("Compilation cancelled", "WarningMsg", "cancel", 100)
   else
     vim.notify("No active job to cancel", vim.log.levels.WARN)
   end

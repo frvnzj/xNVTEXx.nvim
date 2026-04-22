@@ -34,7 +34,7 @@ local function http_get(url, headers, cb)
 end
 
 -- Main function to search for journals and articles
-function M.xCROSSREFx()
+function M.xSEARCH_ISSNx()
   vim.ui.select({ "Keywords", "ISSN" }, { prompt = "Buscar revista por:" }, function(search_type)
     if not search_type then
       return

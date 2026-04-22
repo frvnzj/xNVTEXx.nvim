@@ -58,7 +58,7 @@ local function open_document(url, path)
   end
 end
 
-function M.xCTANSEARCHx()
+function M.xSEARCH_CTANx()
   notify("Obteniendo lista de paquetes...")
 
   http_get("https://www.ctan.org/json/2.0/packages", function(body, err)

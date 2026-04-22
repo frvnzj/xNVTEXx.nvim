@@ -6,23 +6,59 @@ local function notify(msg, level)
   vim.notify("xJUSTEXx: " .. msg, level or vim.log.levels.INFO)
 end
 
+---Sanitize the project name internationally
+---@param str string
+---@return string
 local function sanitize_project_name(str)
-  local accents = {
+  local translation_table = {
     ["á"] = "a",
     ["é"] = "e",
     ["í"] = "i",
     ["ó"] = "o",
     ["ú"] = "u",
+    ["ü"] = "u",
+    ["ñ"] = "n",
+    ["ç"] = "c",
     ["Á"] = "A",
     ["É"] = "E",
     ["Í"] = "I",
     ["Ó"] = "O",
     ["Ú"] = "U",
-    ["ñ"] = "n",
+    ["Ü"] = "U",
     ["Ñ"] = "N",
+    ["Ç"] = "C",
+    ["à"] = "a",
+    ["è"] = "e",
+    ["ì"] = "i",
+    ["ò"] = "o",
+    ["ù"] = "u",
+    ["â"] = "a",
+    ["ê"] = "e",
+    ["î"] = "i",
+    ["ô"] = "o",
+    ["û"] = "u",
+    ["ä"] = "a",
+    ["ë"] = "e",
+    ["ï"] = "i",
+    ["ö"] = "o",
+    ["ß"] = "ss",
   }
-  local sanitized = str:gsub("[áéíóúÁÉÍÓÚñÑ]", accents)
-  return sanitized:gsub("%s+", "_"):gsub('[/\\:%*%?"<>|]', "")
+
+  local sanitized = str:gsub("[%z\1-\127\194-\244][\128-\191]*", function(c)
+    return translation_table[c] or c
+  end)
+
+  sanitized = sanitized:gsub("[%s%.]+", "_")
+  sanitized = sanitized:gsub("[^%w%-_]", "")
+
+  if sanitized == "" then
+    sanitized = "project"
+  end
+  if sanitized:sub(1, 1) == "-" then
+    sanitized = "p" .. sanitized
+  end
+
+  return sanitized
 end
 
 local function create_floating_window(title, content)

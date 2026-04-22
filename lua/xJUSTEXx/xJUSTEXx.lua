@@ -105,7 +105,7 @@ local function prepare_directory(project_path)
     end
   end
 
-  local ok = pcall(vim.fn.mkdir, project_path, "rf")
+  local ok = pcall(vim.fn.mkdir, project_path, "p")
   if not ok then
     notify("Failed to create project directory", vim.log.levels.ERROR)
     return false

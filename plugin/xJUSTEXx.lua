@@ -39,6 +39,10 @@ vim.api.nvim_create_user_command("JustexCancelComp", function()
   xJUSTEXx.xCANCELx()
 end, {})
 
+vim.api.nvim_create_user_command("JustexOpenPDF", function()
+  xJUSTEXx.xVIEWERx()
+end, {})
+
 vim.api.nvim_create_user_command("JustexDoc", function()
   xJUSTEXx.xTEXDOCx()
 end, {})

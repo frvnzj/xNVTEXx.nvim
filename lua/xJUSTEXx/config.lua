@@ -6,6 +6,7 @@ local function set_default_config()
       vim.fs.normalize("~/Documents/xJUSTEXx/Articles"),
       vim.fs.normalize("~/Documents/xJUSTEXx/Research"),
     },
+    pdf_viewer = "zathura", -- "zathura" or "sioyek" for synctex; you can use other
     tex_templates = {
       article = {
         name = "Article",
@@ -77,16 +78,16 @@ This is a presentation template.
 main_file := "%s.tex"
 
 lualatex:
-  @latexmk -lualatex -interaction=nonstopmode -synctex=-1 {{main_file}}
+  @latexmk -lualatex -interaction=nonstopmode -synctex=-1 "{{main_file}}"
 
 pdflatex:
-  @latexmk -pdf -interaction=nonstopmode -synctex=-1 {{main_file}} 
+  @latexmk -pdf -interaction=nonstopmode -synctex=-1 "{{main_file}}"
 
 pdfxe:
-  @latexmk -pdfxe -interaction=nonstopmode -synctex=-1 {{main_file}} 
+  @latexmk -pdfxe -interaction=nonstopmode -synctex=-1 "{{main_file}}"
 
 cleanmain:
-  @latexmk -c {{main_file}}
+  @latexmk -c "{{main_file}}"
 
 cleanall:
   @latexmk -c

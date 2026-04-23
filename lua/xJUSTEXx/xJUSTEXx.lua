@@ -192,42 +192,4 @@ function M.xNEW_PROJECTx()
   end
 end
 
---- Function to open LaTeX documentation for the word under the cursor
-function M.xTEXDOCx()
-  local package = vim.fn.expand("<cword>")
-  if package == "" then
-    return
-  end
-
-  notify("Looking doc for " .. package .. "...")
-
-  vim.system({ "texdoc", package }, {}, function(obj)
-    if obj.code ~= 0 then
-      vim.schedule(function()
-        notify("No doc found for '" .. package .. "'", vim.log.levels.WARN)
-      end)
-    end
-  end)
-end
-
---- Function to run pplatex on the current file and display the log
-function M.xPPLATEXx()
-  local log_file = vim.fn.expand("%:p:r") .. ".log"
-
-  if vim.fn.filereadable(log_file) == 0 then
-    return notify("Log file not found", vim.log.levels.WARN)
-  end
-
-  vim.system({ "pplatex", "-i", log_file }, { text = true }, function(obj)
-    vim.schedule(function()
-      if obj.code ~= 0 and (not obj.stdout or obj.stdout == "") then
-        return notify("pplatex failed", vim.log.levels.ERROR)
-      end
-
-      local lines = vim.split(obj.stdout, "\n")
-      create_floating_window("xJUSTEXx log", lines)
-    end)
-  end)
-end
-
 return M

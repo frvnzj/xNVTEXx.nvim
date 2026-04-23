@@ -51,42 +51,11 @@ local function sanitize_project_name(str)
   sanitized = sanitized:gsub("[%s%.]+", "_")
   sanitized = sanitized:gsub("[^%w%-_]", "")
 
-  if sanitized == "" then
-    sanitized = "project"
-  end
   if sanitized:sub(1, 1) == "-" then
     sanitized = "p" .. sanitized
   end
 
   return sanitized
-end
-
-local function create_floating_window(title, content)
-  local buf = vim.api.nvim_create_buf(false, true)
-  local width = math.floor(vim.o.columns * 0.8)
-  local height = math.floor(vim.o.lines * 0.8)
-
-  local win_config = {
-    relative = "editor",
-    width = width,
-    height = height,
-    row = math.floor((vim.o.lines - height) / 2),
-    col = math.floor((vim.o.columns - width) / 2),
-    style = "minimal",
-    border = "rounded",
-    title = " " .. title .. " ",
-    title_pos = "center",
-  }
-
-  local win = vim.api.nvim_open_win(buf, true, win_config)
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, content)
-
-  vim.bo[buf].modifiable = false
-  vim.bo[buf].buftype = "nofile"
-  vim.keymap.set("n", "q", "<cmd>close<cr>", { buf = buf, silent = true })
-  vim.keymap.set("n", "<Esc>", "<cmd>close<cr>", { buf = buf, silent = true })
-
-  return buf, win
 end
 
 local function prepare_directory(project_path)
@@ -98,16 +67,16 @@ local function prepare_directory(project_path)
       return false
     end
 
-    local ok = pcall(vim.fn.delete, project_path, "rf")
-    if not ok then
+    local delete = vim.fn.delete(project_path, "rf")
+    if delete ~= 0 then
       notify("Failed to remove existing directory", vim.log.levels.ERROR)
       return false
     end
   end
 
-  local ok = pcall(vim.fn.mkdir, project_path, "p")
+  local ok, err = pcall(vim.fn.mkdir, project_path, "p")
   if not ok then
-    notify("Failed to create project directory", vim.log.levels.ERROR)
+    notify("Failed to create project directory: " .. tostring(err), vim.log.levels.ERROR)
     return false
   end
 
@@ -151,7 +120,7 @@ local function setup_project(name, dir, template)
       local main_tex = create_project_files(project_path, clean_name, template)
 
       vim.cmd("edit " .. vim.fn.fnameescape(main_tex))
-      vim.notify("Project  " .. clean_name .. " ready!")
+      notify("Project  " .. clean_name .. " ready!")
     end)
   end)
 end
@@ -162,7 +131,7 @@ function M.xNEW_PROJECTx()
   local templates = config.options.tex_templates
 
   if #dirs == 0 then
-    vim.notify("No project directories defined", vim.log.levels.WARN)
+    notify("No project directories defined", vim.log.levels.WARN)
     return
   end
 

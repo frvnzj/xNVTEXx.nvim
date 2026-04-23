@@ -1,5 +1,7 @@
 local M = {}
 
+local config = require("xJUSTEXx.config")
+
 local state = {
   job_id = nil,
   message_id = "xJUSTEXx",
@@ -55,12 +57,26 @@ end
 
 ---@return string|nil
 local function get_main_file_name()
-  local root = vim.fs.find(".justfile", { upward = true, stop = vim.uv.os_homedir() })[1]
-  if not root then
-    return nil
+  local cwd = vim.uv.cwd()
+  local justfile = vim.fs.joinpath(cwd, ".justfile")
+
+  if vim.uv.fs_stat(justfile) == nil then
+    local current_file = vim.fn.expand("%:t")
+    local name_no_ext = vim.fn.expand("%:t:r")
+
+    if vim.bo.filetype == "tex" then
+      local content = config.set_file_justfile(name_no_ext)
+      vim.fn.writefile(vim.split(content, "\n"), justfile)
+      vim.notify(
+        "xJUSTEXx: automatically generated .justfile for " .. current_file,
+        vim.log.levels.INFO
+      )
+    else
+      return nil
+    end
   end
 
-  local lines = vim.fn.readfile(root)
+  local lines = vim.fn.readfile(justfile)
   for _, line in ipairs(lines) do
     local main_file = line:match('main_file%s*:=%s*"([^"]+)"')
     if main_file then
@@ -78,11 +94,16 @@ function M.xCOMPILEx(command)
     return
   end
 
+  local cwd = vim.uv.cwd()
+  local main_file = get_main_file_name()
+
+  if not main_file then
+    vim.notify("xJUSTEXx: No .justfile found in current directory", vim.log.levels.ERROR)
+    return
+  end
+
   local meta = command_meta[command] or command_meta.default
-  local main_file = get_main_file_name() or vim.fn.expand("%:t")
   local target_display = (command == "cleanall") and "" or main_file
-  local justfile_paths = vim.fs.find(".justfile", { upward = true, stop = vim.uv.os_homedir() })
-  local cwd = (#justfile_paths > 0) and vim.fs.dirname(justfile_paths[1]) or vim.fn.expand("%:p:h")
 
   state.cancelled = false
   update_progress(meta.icon .. " " .. meta.start .. target_display, "None", "running", 10)

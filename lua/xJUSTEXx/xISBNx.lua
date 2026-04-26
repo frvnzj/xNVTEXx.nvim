@@ -19,7 +19,7 @@ end
 
 local function generate_bibkey(value, _)
   local author = "Unknown"
-  if value.authors or value.authors[1] then
+  if value.authors and value.authors[1] then
     author = value.authors[1].name:match("([^%s]+)$") or value.authors[1].name
   end
 

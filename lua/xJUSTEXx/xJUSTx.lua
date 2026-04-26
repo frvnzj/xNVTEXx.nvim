@@ -2,13 +2,20 @@ local M = {}
 
 local config = require("xJUSTEXx.config")
 
-local state = {
+local PROGRESS_STAGES = {
+  start = 10,
+  running = 40,
+  warning = 70,
+  complete = 100,
+}
+
+local STATE = {
   job_id = nil,
   message_id = "xJUSTEXx",
   cancelled = false,
 }
 
-local command_meta = {
+local COMMAND_META = {
   lualatex = {
     start = "xJUSTEXx with LuaLaTeX: ",
     success = "✓ LuaLaTeX: Success",
@@ -47,12 +54,18 @@ local command_meta = {
 ---@param percent integer
 local function update_progress(msg, level, status, percent)
   pcall(vim.api.nvim_echo, { { msg, level } }, false, {
-    id = state.message_id,
+    id = STATE.message_id,
     kind = "progress",
     source = "xJUSTEXx",
     status = status,
     percent = percent,
   })
+end
+
+---@param data table|nil
+---@return boolean
+local function should_skip_callack(data)
+  return STATE.cancelled or not data or (data[1] == "" and #data == 1)
 end
 
 ---@return string|nil
@@ -86,10 +99,80 @@ local function get_main_file_name()
   return nil
 end
 
+---@param command string
+---@return string
+local function get_target_display(command, main_file)
+  return (command == "cleanall") and "" or main_file
+end
+
+---@param command string
+---@return boolean
+local function is_clean_command(command)
+  return command:find("clean") ~= nil
+end
+
+---@param command string
+---@return table
+local function build_job_callback(command, meta)
+  return {
+    on_stdout = function(_, data)
+      if should_skip_callack(data) then
+        return
+      end
+      update_progress(
+        meta.icon .. " xJUSTEXx: " .. command .. "...",
+        "None",
+        "running",
+        PROGRESS_STAGES.running
+      )
+    end,
+
+    on_stderr = function(_, data)
+      if should_skip_callack(data) then
+        return
+      end
+
+      if not is_clean_command(command) then
+        update_progress(
+          "Processing with warnings...",
+          "WarningMsg",
+          "running",
+          PROGRESS_STAGES.warning
+        )
+      end
+    end,
+
+    on_exit = function(_, code)
+      local was_cancelled = STATE.cancelled
+      STATE.job_id = nil
+
+      if was_cancelled then
+        return
+      end
+
+      if code == 0 then
+        update_progress(
+          meta.icon .. " " .. meta.success,
+          "MoreMsg",
+          "success",
+          PROGRESS_STAGES.complete
+        )
+      else
+        update_progress(
+          "Failed " .. command .. " (Code " .. code .. ")",
+          "ErrorMsg",
+          "failed",
+          PROGRESS_STAGES.complete
+        )
+      end
+    end,
+  }
+end
+
 --- Function to execute a "just" command with progress reporting
 ---@param command string: The "just" command to execute
 function M.xCOMPILEx(command)
-  if state.job_id then
+  if STATE.job_id then
     vim.notify("A compile is already running", vim.log.levels.WARN)
     return
   end
@@ -102,57 +185,32 @@ function M.xCOMPILEx(command)
     return
   end
 
-  local meta = command_meta[command] or command_meta.default
-  local target_display = (command == "cleanall") and "" or main_file
+  local meta = COMMAND_META[command] or COMMAND_META.default
+  local target_display = get_target_display(command, main_file)
 
-  state.cancelled = false
-  update_progress(meta.icon .. " " .. meta.start .. target_display, "None", "running", 10)
+  STATE.cancelled = false
+  update_progress(
+    meta.icon .. " " .. meta.start .. target_display,
+    "None",
+    "running",
+    PROGRESS_STAGES.start
+  )
 
-  state.job_id = vim.fn.jobstart({ "just", command }, {
-    cwd = cwd,
-    stdout_buffered = false,
-
-    on_stdout = function(_, data)
-      if state.cancelled or not data or (data[1] == "" and #data == 1) then
-        return
-      end
-
-      update_progress(meta.icon .. " xJUSTEXx: " .. command .. "...", "None", "running", 40)
-    end,
-
-    on_stderr = function(_, data)
-      if state.cancelled or not data or (data[1] == "" and #data == 1) then
-        return
-      end
-
-      if not command:find("clean") then
-        update_progress("Processing with warnings...", "WarningMsg", "running", 70)
-      end
-    end,
-
-    on_exit = function(_, code)
-      local was_cancelled = state.cancelled
-      state.job_id = nil
-
-      if was_cancelled then
-        return
-      end
-
-      if code == 0 then
-        update_progress(meta.icon .. " " .. meta.success, "MoreMsg", "success", 100)
-      else
-        update_progress("Failed " .. command .. " (Code " .. code .. ")", "ErrorMsg", "failed", 100)
-      end
-    end,
-  })
+  STATE.job_id = vim.fn.jobstart(
+    { "just", command },
+    vim.tbl_extend("force", {
+      cwd = cwd,
+      stdout_buffered = false,
+    }, build_job_callback(command, meta))
+  )
 end
 
 function M.xCANCELx()
-  if state.job_id then
-    state.cancelled = true
-    vim.fn.jobstop(state.job_id)
-    state.job_id = nil
-    update_progress("Compilation cancelled", "WarningMsg", "cancel", 100)
+  if STATE.job_id then
+    STATE.cancelled = true
+    vim.fn.jobstop(STATE.job_id)
+    STATE.job_id = nil
+    update_progress("Compilation cancelled", "WarningMsg", "cancel", PROGRESS_STAGES.complete)
   else
     vim.notify("No active job to cancel", vim.log.levels.WARN)
   end

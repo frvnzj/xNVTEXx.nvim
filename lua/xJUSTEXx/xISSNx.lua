@@ -3,7 +3,7 @@ local M = {}
 ---@param msg string
 ---@param level integer|nil
 local function notify(msg, level)
-  vim.notify(msg, level or vim.log.levels.INFO)
+  vim.notify("xISBNx: " .. msg, level or vim.log.levels.INFO)
 end
 
 local function urlencode(str)
@@ -115,12 +115,12 @@ local function handle_bibtex(article)
 
       local bib_file = io.open(bib_path, "a")
       if not bib_file then
-        return notify("Error al abrir refs.bib", vim.log.levels.ERROR)
+        return notify("Error opening refs.bib", vim.log.levels.ERROR)
       end
 
       bib_file:write("\n" .. formatted_bib .. "\n")
       bib_file:close()
-      notify("Guardado en refs.bib")
+      notify("Saved in refs.bib")
       vim.cmd("vsplit " .. bib_path)
     end
   )
@@ -145,7 +145,7 @@ local function handle_epub(article, epub_url)
   local filename = download_dir .. clean_title .. ".epub"
 
   if vim.fn.isdirectory(download_dir) == 0 then
-    return notify("Error: directory does not exist " .. download_dir, vim.log.levels.ERROR)
+    return notify("Directory " .. download_dir .. " does not exist", vim.log.levels.ERROR)
   end
 
   notify("Starting EPUB download...")
@@ -153,7 +153,7 @@ local function handle_epub(article, epub_url)
   vim.system({ "curl", "-L", "-o", filename, epub_url }, { detach = true }, function(obj)
     vim.schedule(function()
       if obj.code == 0 then
-        notify("Discharged: " .. clean_title .. ".epub")
+        notify("Discharged " .. clean_title .. ".epub")
       else
         local detail = obj.stderr or string.format("Código %d", obj.code)
         notify("Error downloading: " .. detail, vim.log.levels.ERROR)

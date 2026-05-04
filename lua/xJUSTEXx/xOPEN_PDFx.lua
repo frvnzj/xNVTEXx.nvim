@@ -19,7 +19,7 @@ local VIEWERS_CONFIG = {
       tex,
       "--forward-search-line",
       tostring(line),
-      "forward-search-column",
+      "--forward-search-column",
       tostring(col),
       pdf,
     }

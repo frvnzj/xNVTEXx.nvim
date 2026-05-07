@@ -3,9 +3,9 @@ local M = {}
 local config = require("xJUSTEXx.config")
 
 local PROGRESS_STAGES = {
-  start = 10,
-  running = 40,
-  warning = 70,
+  start = 0,
+  running = nil,
+  warning = nil,
   complete = 100,
 }
 
@@ -51,7 +51,7 @@ local COMMAND_META = {
 ---@param msg string
 ---@param level string
 ---@param status string
----@param percent integer
+---@param percent integer|nil
 local function update_progress(msg, level, status, percent)
   pcall(vim.api.nvim_echo, { { msg, level } }, false, {
     id = STATE.message_id,

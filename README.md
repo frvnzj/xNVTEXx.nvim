@@ -96,6 +96,7 @@ setup is:
     vim.fs.normalize("~/Documents/xJUSTEXx/Articles"),
     vim.fs.normalize("~/Documents/xJUSTEXx/Research"),
   },
+  pdf_viewer = "zathura", -- "zathura" or "sioyek" for synctex; you can use other
   tex_templates = {
     article = {
       name = 'Article',
@@ -186,6 +187,16 @@ cleanall:
 ]],
 }
 ```
+
+> ⚠️
+> Para abrir el PDF compilado pues establecer Zathura, Sioyek u otro vizor de
+> PDF en la opción pdf_viewer; sin embargo, los comandos JustexSearchCTAN y
+> JustexSearchJournal siguen dependiendo de Zathura para abrir PDF.
+
+> ⚠️
+> To open the compiled PDF, set Zathura, Sioyek or another PDF viewer to the
+> pdf_viewer option; however, the JustexSearchCTAN and JustexSearchJournal
+> commands still rely on Zathura to open PDF.
 
 ## Use
 

@@ -17,48 +17,50 @@ local STATE = {
 
 local COMMAND_META = {
   lualatex = {
-    start = "xJUSTEXx with LuaLaTeX: ",
-    success = "✓ LuaLaTeX: Success",
-    icon = "󰚔",
+    start = "Compiling with LuaLaTeX: ",
+    success = "LuaLaTeX: Success",
+    icon = "󰚔 ",
   },
   pdflatex = {
-    start = "xJUSTEXx with PDFLaTeX: ",
-    success = "✓ PDFLaTeX: Success",
-    icon = "󰚔",
+    start = "Compiling with PDFLaTeX: ",
+    success = "PDFLaTeX: Success",
+    icon = "󰚔 ",
   },
   pdfxe = {
-    start = "xJUSTEXx with XeLaTeX: ",
-    success = "✓ XeLaTeX: Success",
-    icon = "󰚔",
+    start = "Compiling with XeLaTeX: ",
+    success = "XeLaTeX: Success",
+    icon = "󰚔 ",
   },
   cleanmain = {
-    start = "Cleaning proyect: ",
-    success = "✓ Clean project",
-    icon = "󰃢",
+    start = "Cleaning project: ",
+    success = "Clean project",
+    icon = "󰃢 ",
   },
   cleanall = {
-    start = "Total cleaning of temporary",
-    success = "✓ Erased temporary",
-    icon = "󰃢",
+    start = "Full outputs cleanup: ",
+    success = "All outputs cleared",
+    icon = "󰃢 ",
   },
   default = {
-    start = "Running xJUSTEXx: ",
-    success = "✓ Just finished",
-    icon = "󱁤",
+    start = "Processing: ",
+    success = "Task finished",
+    icon = "󱁤 ",
   },
 }
 
 ---@param msg string
 ---@param level string
+---@param history boolean|nil
 ---@param status string
 ---@param percent integer|nil
-local function update_progress(msg, level, status, percent)
-  pcall(vim.api.nvim_echo, { { msg, level } }, false, {
+local function update_progress(msg, level, status, percent, history)
+  pcall(vim.api.nvim_echo, { { msg, level } }, history or false, {
     id = STATE.message_id,
     kind = "progress",
     source = "xJUSTEXx",
     status = status,
     percent = percent,
+    title = "xJUSTEXx",
   })
 end
 
@@ -119,12 +121,7 @@ local function build_job_callback(command, meta)
       if should_skip_callack(data) then
         return
       end
-      update_progress(
-        meta.icon .. " xJUSTEXx: " .. command .. "...",
-        "None",
-        "running",
-        PROGRESS_STAGES.running
-      )
+      update_progress(meta.icon .. command .. "...", "None", "running", PROGRESS_STAGES.running)
     end,
 
     on_stderr = function(_, data)
@@ -152,17 +149,19 @@ local function build_job_callback(command, meta)
 
       if code == 0 then
         update_progress(
-          meta.icon .. " " .. meta.success,
+          meta.icon .. meta.success,
           "MoreMsg",
           "success",
-          PROGRESS_STAGES.complete
+          PROGRESS_STAGES.complete,
+          true
         )
       else
         update_progress(
           "Failed " .. command .. " (Code " .. code .. ")",
           "ErrorMsg",
           "failed",
-          PROGRESS_STAGES.complete
+          PROGRESS_STAGES.complete,
+          true
         )
       end
     end,
@@ -190,10 +189,11 @@ function M.xCOMPILEx(command)
 
   STATE.cancelled = false
   update_progress(
-    meta.icon .. " " .. meta.start .. target_display,
+    meta.icon .. meta.start .. target_display,
     "None",
     "running",
-    PROGRESS_STAGES.start
+    PROGRESS_STAGES.start,
+    true
   )
 
   STATE.job_id = vim.fn.jobstart(
@@ -210,7 +210,7 @@ function M.xCANCELx()
     STATE.cancelled = true
     vim.fn.jobstop(STATE.job_id)
     STATE.job_id = nil
-    update_progress("Compilation cancelled", "WarningMsg", "cancel", PROGRESS_STAGES.complete)
+    update_progress("Compilation cancelled", "WarningMsg", "cancel", PROGRESS_STAGES.complete, true)
   else
     vim.notify("No active job to cancel", vim.log.levels.WARN)
   end

@@ -220,6 +220,12 @@ xJUSTEXx ofrece nueve comandos:
   - `:JustexCompile cleanmain`
   - `:JustexCompile cleanall`
 
+  > ℹ️
+  > Si ya tienes un proyecto que no fue creado con xJUSTEXx, al ejecutar
+  > `JustexCompile` se creará automáticamente .justfile para compilar. Es
+  > necesario que el buffer del archivo sea `tex`, si es del tipo `plaintex` no
+  > se creará el .justfile
+
 - **JustexCancelComp**: cancela la compilación cuando lo creas necesario.
 
 - **JustexOpenPDF**: abre el PDF del main file con zathura(default) o sioyek;
@@ -274,6 +280,12 @@ xJUSTEXx offers nueve commands:
   - `:JustexCompile pdfxe`
   - `:JustexCompile cleanmain`
   - `:JustexCompile cleanall`
+
+  > ℹ️
+  > If you already have a project that was not created with xJUSTEXx, running
+  > `JustexCompile` will automatically create a .justfile to compile. It is
+  > necessary that the file buffer be `tex`, if it is of type `plaintex` the
+  > .justfile will not be created
 
 - **JustexCancelComp**: cancel the compilation when you think it is necessary.
 

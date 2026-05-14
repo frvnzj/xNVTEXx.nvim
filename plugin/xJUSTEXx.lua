@@ -55,9 +55,27 @@ vim.api.nvim_create_user_command("JustexSearchBook", function()
   xJUSTEXx.xISBNx()
 end, {})
 
-vim.api.nvim_create_user_command("JustexSearchJournal", function()
-  xJUSTEXx.xISSNx()
-end, {})
+vim.api.nvim_create_user_command("JustexSearchJournal", function(opts)
+  local subcmd = opts.fargs[1]
+
+  if subcmd == "last_article" then
+    xJUSTEXx.xLAST_ARTICLEx()
+  elseif subcmd == "last_results" then
+    xJUSTEXx.xLAST_RESULTSx()
+  elseif subcmd == "search" or subcmd == nil then
+    xJUSTEXx.xISSNx()
+  else
+    vim.notify("xISSNx: unknown subcommand '" .. subcmd .. "'", vim.log.levels.ERROR)
+  end
+end, {
+  nargs = "?",
+  complete = function(ArgLead)
+    local subcommands = { "search", "last_article", "last_results" }
+    return vim.tbl_filter(function(cmd)
+      return cmd:find("^" .. ArgLead)
+    end, subcommands)
+  end,
+})
 
 vim.api.nvim_create_user_command("JustexSearchCTAN", function()
   xJUSTEXx.xCTANx()

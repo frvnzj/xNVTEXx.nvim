@@ -1,9 +1,29 @@
 local M = {}
 
+M._last_article = nil
+M._last_results = nil
+
 ---@param msg string
 ---@param level integer|nil
 local function notify(msg, level)
   vim.notify("xISBNx: " .. msg, level or vim.log.levels.INFO)
+end
+
+local function get_download_dir()
+  local project_root = vim.fs.root(0, { ".git", ".gitignore", ".justfile" })
+
+  local target_dir
+  if project_root then
+    target_dir = project_root .. "/bibliography/"
+  else
+    target_dir = vim.fn.expand("~/Downloads/")
+  end
+
+  if vim.fn.isdirectory(target_dir) == 0 then
+    vim.fn.mkdir(target_dir, "p")
+  end
+
+  return target_dir
 end
 
 local function urlencode(str)
@@ -101,6 +121,8 @@ local function extract_media_urls(article)
   return pdf_url, epub_url
 end
 
+local handle_article_actions
+
 local function handle_bibtex(article)
   http_get(
     "https://doi.org/" .. article.DOI,
@@ -111,27 +133,111 @@ local function handle_bibtex(article)
       end
 
       local formatted_bib = bib:gsub(",%s*", ",\n  "):gsub("%s*}%s*$", "\n}")
-      local bib_path = vim.fn.expand("%:p:h") .. "/refs.bib"
 
-      local bib_file = io.open(bib_path, "a")
-      if not bib_file then
-        return notify("Error opening refs.bib", vim.log.levels.ERROR)
-      end
+      local bib_options = {
+        "Append to refs.bib",
+        "Copy to clipboard",
+        "Back to Article Options",
+        "Exit",
+      }
 
-      bib_file:write("\n" .. formatted_bib .. "\n")
-      bib_file:close()
-      notify("Saved in refs.bib")
-      vim.cmd("vsplit " .. bib_path)
+      show_select(bib_options, { prompt = " BibTeX Options" }, function(choice)
+        if not choice or choice == "Exit" then
+          return
+        end
+
+        if choice == "Back to Article Options" then
+          handle_article_actions(article)
+          return
+        end
+
+        if choice == "Append to refs.bib" then
+          local bib_path = get_download_dir() .. "refs.bib"
+          local bib_file = io.open(bib_path, "a")
+
+          if not bib_file then
+            return notify("Error opening refs.bib", vim.log.levels.ERROR)
+          end
+
+          bib_file:write("\n" .. formatted_bib .. "\n")
+          bib_file:close()
+
+          notify("Saved in " .. bib_path)
+
+          vim.defer_fn(function()
+            handle_article_actions(article)
+          end, 100)
+        elseif choice == "Copy to clipboard" then
+          vim.fn.setreg("+", formatted_bib)
+
+          notify("BibTeX copied to clipboard")
+
+          vim.defer_fn(function()
+            handle_article_actions(article)
+          end, 100)
+        end
+      end)
     end
   )
 end
 
-local function handle_pdf(pdf_url)
+local function handle_pdf(article, pdf_url)
   if not pdf_url then
     return
   end
 
-  vim.system({ "zathura", pdf_url }, { detach = true })
+  local pdf_options = {
+    "Only view PDF",
+    "Download and view PDF",
+    "Only download PDF",
+    "Back to Article Options",
+    "Exit",
+  }
+
+  show_select(pdf_options, { prompt = " PDF options " }, function(choice)
+    if not choice or choice == "Exit" then
+      return
+    end
+
+    if choice == "Back to Article Options" then
+      handle_article_actions(article)
+    end
+
+    local raw_title = safe_get(article, "title", 1) or "article_xJUSTEXx"
+    local clean_title = raw_title:gsub("%s+", "_"):gsub("[%c%?%*\\/<>|:\"']", "")
+
+    local download_dir = get_download_dir()
+    local filename = download_dir .. clean_title .. ".pdf"
+
+    if choice == "Only view PDF" then
+      notify("Opening '" .. raw_title .. "'...")
+      vim.system({ "zathura", pdf_url }, { detach = true })
+      vim.defer_fn(function()
+        handle_article_actions(article)
+      end, 100)
+    elseif choice == "Download and view PDF" or choice == "Only download PDF" then
+      notify("Starting PDF download...")
+
+      vim.system({ "curl", "-L", "-o", filename, pdf_url }, { detach = true }, function(obj)
+        vim.schedule(function()
+          if obj.code == 0 then
+            notify("Downloaded " .. clean_title .. ".pdf")
+
+            if choice == "Download and view PDF" then
+              vim.system({ "zathura", filename }, { detach = true })
+            end
+          else
+            local detail = obj.stderr or string.format("Code %d", obj.code)
+            notify("Error downloading: " .. detail, vim.log.levels.ERROR)
+          end
+        end)
+      end)
+
+      vim.defer_fn(function()
+        handle_article_actions(article)
+      end, 100)
+    end
+  end)
 end
 
 local function handle_epub(article, epub_url)
@@ -141,46 +247,63 @@ local function handle_epub(article, epub_url)
 
   local raw_title = safe_get(article, "title", 1) or "article_xJUSTEXx"
   local clean_title = raw_title:gsub("%s+", "_"):gsub("[%c%?%*\\/<>|:\"']", "")
-  local download_dir = vim.fn.expand("~/Downloads/")
-  local filename = download_dir .. clean_title .. ".epub"
 
-  if vim.fn.isdirectory(download_dir) == 0 then
-    return notify("Directory " .. download_dir .. " does not exist", vim.log.levels.ERROR)
-  end
+  local download_dir = get_download_dir()
+  local filename = download_dir .. clean_title .. ".epub"
 
   notify("Starting EPUB download...")
 
   vim.system({ "curl", "-L", "-o", filename, epub_url }, { detach = true }, function(obj)
     vim.schedule(function()
       if obj.code == 0 then
-        notify("Discharged " .. clean_title .. ".epub")
+        notify("Downloaded " .. clean_title .. ".epub")
       else
-        local detail = obj.stderr or string.format("Código %d", obj.code)
+        local detail = obj.stderr or string.format("Code %d", obj.code)
         notify("Error downloading: " .. detail, vim.log.levels.ERROR)
       end
     end)
   end)
 end
 
-function M.handle_article_actions(article)
-  local options = { "BibTeX" }
+function handle_article_actions(article)
+  if not article then
+    return
+  end
+  M._last_article = article
+
+  local options = { "Get BibTeX" }
   local pdf_url, epub_url = extract_media_urls(article)
 
   if pdf_url then
-    table.insert(options, "PDF")
+    table.insert(options, "View or download PDF")
   end
 
   if epub_url then
-    table.insert(options, "EPUB")
+    table.insert(options, "Download EPUB")
   end
 
-  show_select(options, { prompt = " Select a format " }, function(choice)
-    if choice == "BibTeX" then
+  if M._last_results and #M._last_results > 0 then
+    table.insert(options, "Back to results")
+  end
+
+  table.insert(options, "Exit")
+
+  show_select(options, { prompt = " Article Options " }, function(choice)
+    if not choice or choice == "Exit" then
+      return
+    end
+
+    if choice == "Get BibTeX" then
       handle_bibtex(article)
-    elseif choice == "PDF" then
-      handle_pdf(pdf_url)
-    elseif choice == "EPUB" then
+    elseif choice == "View or download PDF" then
+      handle_pdf(article, pdf_url)
+    elseif choice == "Download EPUB" then
       handle_epub(article, epub_url)
+      vim.defer_fn(function()
+        handle_article_actions(article)
+      end, 100)
+    elseif choice == "Back to results" then
+      M.xLAST_RESULTSx()
     end
   end)
 end
@@ -263,6 +386,8 @@ function M.xSEARCH_ISSNx()
                 return notify("There are no articles", vim.log.levels.WARN)
               end
 
+              M._last_results = articles
+
               show_select(articles, {
                 prompt = " Select an article ",
                 format_item = extract_article_display,
@@ -271,7 +396,7 @@ function M.xSEARCH_ISSNx()
                   return
                 end
 
-                M.handle_article_actions(article)
+                handle_article_actions(article)
               end)
             end)
           end)
@@ -279,6 +404,31 @@ function M.xSEARCH_ISSNx()
       end)
     end)
   end)
+end
+
+function M.xLAST_ARTICLEx()
+  if not M._last_article then
+    return notify("No recent searches", vim.log.levels.WARN)
+  end
+  handle_article_actions(M._last_article)
+end
+
+function M.xLAST_RESULTSx()
+  if not M._last_results or #M._last_results == 0 then
+    return notify("No searches for recent articles", vim.log.levels.WARN)
+  end
+
+  show_select(
+    M._last_results,
+    { prompt = " Latest results ", format_item = extract_article_display },
+    function(article)
+      if not article then
+        return
+      end
+
+      handle_article_actions(article)
+    end
+  )
 end
 
 return M

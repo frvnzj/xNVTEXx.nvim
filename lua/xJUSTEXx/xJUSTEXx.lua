@@ -195,7 +195,7 @@ local function show_template_and_name_wizard(selected_dir)
   local templates = config.options.tex_templates
 
   vim.ui.select(vim.tbl_keys(templates), {
-    prompt = "Select Template:",
+    prompt = " Select a template ",
     format_item = function(key)
       return templates[key].name
     end,
@@ -204,7 +204,7 @@ local function show_template_and_name_wizard(selected_dir)
       return
     end
 
-    vim.ui.input({ prompt = "Project name: " }, function(name)
+    vim.ui.input({ prompt = " Project name " }, function(name)
       if name and name ~= "" then
         setup_project(name, selected_dir, templates[template_key].content)
       end
@@ -223,7 +223,7 @@ function M.xNEW_PROJECTx()
   if #dirs == 1 then
     show_template_and_name_wizard(dirs[1])
   else
-    vim.ui.select(dirs, { prompt = "Select Directory:" }, show_template_and_name_wizard)
+    vim.ui.select(dirs, { prompt = " Select a directory " }, show_template_and_name_wizard)
   end
 end
 

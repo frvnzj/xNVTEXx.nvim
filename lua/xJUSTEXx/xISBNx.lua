@@ -36,7 +36,7 @@ local function extract_book_data(value)
   local year = (value.publish_date and value.publish_date:match("(%d%d%d%d)")) or "????"
 
   return {
-    title = value.title or "Sin título",
+    title = value.title or "Untitled",
     subtitle = value.subtitle or "",
     first_author = first_author,
     authors = value.authors or {},
@@ -213,7 +213,7 @@ end
 
 --- Main function to search for a book by ISBN and handle user interaction.
 function M.xSEARCH_ISBNx()
-  vim.ui.input({ prompt = " Ingrese ISBN (puede incluir guiones): " }, function(isbn_input)
+  vim.ui.input({ prompt = " Enter ISBN (may include hyphens) " }, function(isbn_input)
     local format_isbn = validate_isbn(isbn_input)
     if not format_isbn then
       return
@@ -241,7 +241,7 @@ function M.xSEARCH_ISBNx()
         save_and_open_bib(options[1].bibtex)
       else
         vim.ui.select(options, {
-          prompt = " Seleccione una entrada:",
+          prompt = " Select an entry ",
           format_item = function(item)
             return item.label
           end,

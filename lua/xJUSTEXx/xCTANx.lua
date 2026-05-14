@@ -200,7 +200,7 @@ function M.xSEARCH_CTANx()
     local package_list = build_package_list(packages)
 
     vim.ui.select(package_list, {
-      prompt = "CTAN package  > ",
+      prompt = " CTAN package  ",
       format_item = format_package_item,
     }, function(selected)
       if not selected then
@@ -216,7 +216,7 @@ function M.xSEARCH_CTANx()
         local doc_list = build_doc_list(docs)
 
         vim.ui.select(doc_list, {
-          prompt = selected.key .. " Documentation > ",
+          prompt = selected.key .. " Documentation ",
           format_item = format_doc_item,
         }, function(doc_selected)
           if not doc_selected then

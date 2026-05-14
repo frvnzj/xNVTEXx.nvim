@@ -72,7 +72,7 @@ local function extract_journal_info(item)
 
   local title = item.title
   if type(title) == "table" then
-    title = title[1] or "Sin título"
+    title = title[1] or "Untitled"
   elseif not title then
     title = "Sin título"
   end
@@ -82,7 +82,7 @@ end
 
 local function extract_article_display(article)
   local year = safe_get(article, "created", "date-parts", 1, 1) or "????"
-  local title = safe_get(article, "title", 1) or "Sin título"
+  local title = safe_get(article, "title", 1) or "Untitled"
   return string.format("[%s] %s", year, title)
 end
 
@@ -139,7 +139,7 @@ local function handle_epub(article, epub_url)
     return
   end
 
-  local raw_title = safe_get(article, "title", 1) or "articulo_xJUSTEXx"
+  local raw_title = safe_get(article, "title", 1) or "article_xJUSTEXx"
   local clean_title = raw_title:gsub("%s+", "_"):gsub("[%c%?%*\\/<>|:\"']", "")
   local download_dir = vim.fn.expand("~/Downloads/")
   local filename = download_dir .. clean_title .. ".epub"
@@ -174,7 +174,7 @@ function M.handle_article_actions(article)
     table.insert(options, "EPUB")
   end
 
-  show_select(options, { prompt = "Acción: " }, function(choice)
+  show_select(options, { prompt = " Select a format " }, function(choice)
     if choice == "BibTeX" then
       handle_bibtex(article)
     elseif choice == "PDF" then
@@ -187,12 +187,12 @@ end
 
 -- Main function to search for journals and articles
 function M.xSEARCH_ISSNx()
-  show_select({ "Keywords", "ISSN" }, { prompt = "Buscar revista por:" }, function(search_type)
+  show_select({ "Keywords", "ISSN" }, { prompt = " Search journals by " }, function(search_type)
     if not search_type then
       return
     end
 
-    vim.ui.input({ prompt = "Consultar: " }, function(input)
+    vim.ui.input({ prompt = " Journal name or keyword " }, function(input)
       if not input or input == "" then
         return
       end
@@ -204,7 +204,7 @@ function M.xSEARCH_ISSNx()
         url = "https://api.crossref.org/journals/" .. urlencode(input:gsub("%s+", ""))
       end
 
-      notify("Buscando revista...")
+      notify("Looking for journal...")
       http_get(url, nil, function(body, err)
         if err or not body then
           return notify("Error: " .. (err or "Not body"), vim.log.levels.ERROR)
@@ -218,7 +218,7 @@ function M.xSEARCH_ISSNx()
         local items = search_type == "Keywords" and safe_get(data, "message", "items")
           or { safe_get(data, "message") }
         if not items or #items == 0 then
-          return notify("No magazines found", vim.log.levels.WARN)
+          return notify("No journals found", vim.log.levels.WARN)
         end
 
         local journal_map = {}
@@ -227,7 +227,7 @@ function M.xSEARCH_ISSNx()
         end
 
         vim.ui.select(journal_map, {
-          prompt = "Seleccionar revista:",
+          prompt = " Select a journal ",
           format_item = function(item)
             return item.label
           end,
@@ -236,7 +236,7 @@ function M.xSEARCH_ISSNx()
             return
           end
 
-          vim.ui.input({ prompt = "Buscar artículos: " }, function(art_query)
+          vim.ui.input({ prompt = " Search articles (keyword) " }, function(art_query)
             if not art_query or art_query == "" then
               return
             end
@@ -247,7 +247,7 @@ function M.xSEARCH_ISSNx()
               urlencode(art_query)
             )
 
-            notify("Buscando artículos...")
+            notify("Searching for articles...")
             http_get(art_url, nil, function(art_body, art_err)
               if art_err or not art_body then
                 return notify("Error: " .. (art_err or "Unanswered"), vim.log.levels.ERROR)
@@ -264,7 +264,7 @@ function M.xSEARCH_ISSNx()
               end
 
               show_select(articles, {
-                prompt = "Selecciona artículo:",
+                prompt = " Select an article ",
                 format_item = extract_article_display,
               }, function(article)
                 if not article then

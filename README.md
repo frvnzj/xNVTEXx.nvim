@@ -255,15 +255,19 @@ xJUSTEXx ofrece nueve comandos:
 - **JustexSearchJournal**: busca referencias por medio de CrossRef, tiene mayor
   versatilidad este comando gracias a su API y por el mismo índice de revistas
   académicas.
+  - **JustexSearchJournal last_article**: con este subcomando podras abrir las
+    opciones para el último artículo consultado.
+  - **JustexSearchJournal last_results**: con este subcomando podras consultar
+    la última búsqueda de artículos.
 
   > ❕
   > Comienza por hacer la búsqueda de la revista académica, ya sea por palabras
   > clave o por el ISSN; después, busca artículos por palabras clave. Del
-  > artículo seleccionado podrás agregar la referencia en formato biblatex en el
-  > archivo refs.bib (se creará automáticamente), podrás seleccionar abrir el PDF
-  > del artículo en Zathura (es el único viewer configurado por ahora) o
-  > descargar el EPUB en ~/Downloads (la accesibilidad a PDF's o EPUB's depende
-  > de la disponibilidad de las revistas).
+  > artículo seleccionado podrás agregar la referencia en formato biblatex en
+  > el archivo refs.bib (se creará automáticamente), podrás abrir y descargar
+  > el PDF del artículo en Zathura (es el único viewer configurado por ahora) o
+  > descargar el EPUB. La accesibilidad a PDF's o EPUB's depende de la
+  > disponibilidad de las revistas.
 
 ---
 
@@ -315,16 +319,20 @@ xJUSTEXx offers nueve commands:
 
 - **JustexSearchJournal**: Look for references through Crossref, this command
   has greater versatility thanks to its API and the same index of academic
-  magazines.
+  journals.
+  - **JustexSearchJournal last_article**: with this subcommand you can open the
+    options for the last article consulted.
+  - **JustexSearchJournal last_results**: with this subcommand you can consult
+    the last article search.
 
   > ❕
-  > It begins by searching the academic magazine, either by keywords or by the
-  > ISSN; Then, look for articles by keywords. From the selected article you can
-  > add the reference in the Bibliatex format in the refs.bib file (it will be
-  > created automatically), you can select to open the PDF of the article in
-  > Zathura (it is the only viewer configured for now) or download the epub in
-  > ~/Downloads (accessibility to PDF's or EPUB's depends on the availability of
-  > magazines).
+  > Start by searching for the academic journal, either by keywords or by ISSN;
+  > then search for articles by keywords. For the selected article you can add
+  > the reference in biblatex format in the refs.bib file (it will be created
+  > automatically), you can open and download the PDF of the article in Zathura
+  > (it is the only viewer configured for now) or download the EPUB.
+  > Accessibility to PDF's or EPUB's depends on the availability of the
+  > journals.
 
 ## Change default configuration
 
@@ -417,31 +425,28 @@ It is also recommended to use
 `ftplugin/tex.lua` y `ftplugin/plaintex.lua`, for example:
 
 ```lua
-local wk = require("which-key")
+local function keymap(map, command, desc)
+  vim.keymap.set("n", map, command, { silent = true, desc = desc })
+end
 
-wk.add({
-  { "<leader>wa", "<cmd>JustexCompile lualatex<cr>", desc = "xJAVx LuaLaTeX", icon = { icon = "", color = "azure" } },
-  { "<leader>wb", "<cmd>JustexCompile pdflatex<cr>", desc = "xJAVx LaTeX", icon = { icon = "", color = "azure" } },
-  { "<leader>wc", "<cmd>JustexCompile pdfxe<cr>", desc = "xJAVx XeLaTeX", icon = { icon = "", color = "azure" } },
-})
+keymap("<leader>aa", "<cmd>JustexCompile lualatex<cr>", "xLUALATEXx")
+keymap("<leader>acc", "<cmd>JustexCompile pdflatex<cr>", "xLATEXx")
+keymap("<leader>acx", "<cmd>JustexCompile pdfxe<cr>", "xXELATEXx")
+keymap("<leader>add", "<cmd>JustexCompile cleanmain<cr>", "xCLEAN-MAINx")
+keymap("<leader>ada", "<cmd>JustexCompile cleanall<cr>", "xCLEAN-ALLx")
+keymap("<leader>aq", "<cmd>JustexCancelComp<cr>", "Cancel Comp")
 
-vim.keymap.set("n", "<leader>wd", function()
-  require("xJUSTEXx").xCOMPILEx("cleanmain")
-end, { noremap = true, silent = true })
+keymap("<leader>ai", "<cmd>JustexSearchBook<cr>", "JustexISBN")
+keymap("<leader>ajj", "<cmd>JustexSearchJournal<cr>", "SEARCHxISSN")
+keymap("<leader>aja", "<cmd>JustexSearchJournal last_article<cr>", "lastXarticle")
+keymap("<leader>ajs", "<cmd>JustexSearchJournal last_results<cr>", "lastXresults")
 
-vim.keymap.set("n", "<leader>wl", function()
-  require("xJUSTEXx").xPPLATEXx()
-end, { noremap = true, silent = true })
+keymap("<leader>am", "<cmd>JustexSearchCTAN<cr>", "JustexCTAN")
+keymap("<leader>at", "<cmd>JustexDoc<cr>", "JustexTexdoc")
 
-vim.keymap.set("n", "<leader>wT", function()
-  require("xJUSTEXx").xTEXDOCx()
-end, { noremap = true, silent = true })
+keymap("<leader>ao", "<cmd>JustexLog<cr>", "JustexLog")
 
--- Estos keymaps permiten ir rápidamente a los sitios que quiero modificar,
--- por ejemplo, en \authorsnames{<++>} me lleva dentro de { } borrando <++>
--- permitiéndome ingresar el nombre \authorsnames{xJAVx}
-vim.keymap.set("n", ",,", "<cmd>keepp /<++><cr>ca<", { noremap = true, silent = true })
-vim.keymap.set("i", ",,", "<esc>0<cmd>keepp /<++><cr>ca<", { noremap = true, silent = true })
+keymap("<leader>az", "<cmd>JustexOpenPDF<cr>", "JustexPDF")
 ```
 
 ## Contribuciones

@@ -1,46 +1,45 @@
-*xJUSTEXx.txt*   Gestor de proyectos LaTeX con Just y Neovim
+*xJUSTEXx.txt*   LaTeX project manager with Just and Neovim   *xJUSTEXx*
 
 ==============================================================================
-CONTENIDO                                         *xJUSTEXx-contents*
+CONTENTS                                                  *xJUSTEXx-contents*
 
-1. Introducción...................................|xJUSTEXx-intro|
-2. Dependencias...................................|xJUSTEXx-deps|
-3. Instalación....................................|xJUSTEXx-install|
-4. Configuración..................................|xJUSTEXx-config|
-5. Comandos.......................................|xJUSTEXx-commands|
-6. Funciones API..................................|xJUSTEXx-api|
-7. Recomendaciones................................|xJUSTEXx-tips|
-
-==============================================================================
-1. INTRODUCCIÓN                                   *xJUSTEXx-intro*
-
-xJUSTEXx es un plugin diseñado para facilitar la creación de documentos LaTeX
-en Neovim. Combina la gestión de proyectos (estructura de carpetas e inicialización
-de Git) con el uso de `just` como herramienta de automatización para compilar
-mediante TeXlive.
-
-Características principales:
-- Creación automatizada de proyectos con archivos `.justfile`.
-- Compilación asíncrona con reporte de progreso mediante `nvim_echo`.
-- Integración con buscadores de referencias (Open Library y CrossRef).
-- Búsqueda de documentación en CTAN.
+1. Introduction...................................|xJUSTEXx-intro|
+2. Dependencies...................................|xJUSTEXx-deps|
+3. Installation..................................|xJUSTEXx-install|
+4. Configuration.................................|xJUSTEXx-config|
+5. Commands......................................|xJUSTEXx-commands|
+6. API Functions.................................|xJUSTEXx-api|
+7. Recommendations................................|xJUSTEXx-tips|
 
 ==============================================================================
-2. DEPENDENCIAS                                   *xJUSTEXx-deps*
+1. INTRODUCTION                                           *xJUSTEXx-intro*
 
-Para el correcto funcionamiento se requieren:
+xJUSTEXx is a plugin designed to streamline LaTeX document creation in Neovim.
+It combines project management (directory structure and Git initialization)
+with `just` as an automation tool to compile using TeXlive.
+
+Main Features:
+- Automated project creation with `.justfile` generation.
+- Asynchronous compilation with progress reporting via `nvim_echo`.
+- Integration with reference search engines (Open Library and CrossRef).
+- CTAN documentation lookup.
+
+==============================================================================
+2. DEPENDENCIES                                            *xJUSTEXx-deps*
+
+The following tools are required for full functionality:
 - Neovim >= 0.12
 - Git
 - Just (https://github.com/casey/just)
-- Zathura (Visor de PDF predeterminado)
-- Curl (Para peticiones a APIs)
-- TeXlive (y latexmk para los comandos por defecto)
-- pplatex (Opcional, para el comando |:JustexLog|)
+- Zathura (Default PDF viewer)
+- Curl (For API requests)
+- TeXlive (including latexmk for default commands)
+- pplatex (Optional, for |:JustexLog|)
 
 ==============================================================================
-3. INSTALACIÓN                                    *xJUSTEXx-install*
+3. INSTALLATION                                         *xJUSTEXx-install*
 
-Usando lazy.nvim:
+Using lazy.nvim:
 >lua
     {
       "frvnzj/xJUSTEXx.nvim",
@@ -49,7 +48,7 @@ Usando lazy.nvim:
       end,
     }
 <
-Si eres usuario de noice.nvim, puedes redirigir el progreso:
+If you use noice.nvim, you can redirect the progress messages:
 >lua
     {
       filter = { event = "msg_show", kind = "progress" },
@@ -58,11 +57,11 @@ Si eres usuario de noice.nvim, puedes redirigir el progreso:
     }
 <
 ==============================================================================
-4. CONFIGURACIÓN                                  *xJUSTEXx-config*
+4. CONFIGURATION                                         *xJUSTEXx-config*
 
-El plugin se configura mediante la función `setup()`.
+The plugin is configured using the `setup()` function.
 
-OPCIONES PREDETERMINADAS:                         *xJUSTEXx-defaults*
+DEFAULT OPTIONS:                                       *xJUSTEXx-defaults*
 >lua
     require("xJUSTEXx").setup({
       project_dirs = {
@@ -71,78 +70,94 @@ OPCIONES PREDETERMINADAS:                         *xJUSTEXx-defaults*
       },
       pdf_viewer = "zathura",
       tex_templates = {
-        -- Plantillas: article, book, presentation
+        -- Templates: article, book, presentation
       },
-      justfile_content = [[ ... ]] -- Estructura para Just
+      justfile_content = [[ ... ]] -- Just structure
     })
 <
 
-ATRIBUTOS DE CONFIGURACIÓN:
+CONFIGURATION ATTRIBUTES:
 
-- {project_dirs} (table): Lista de rutas donde se crearán nuevos proyectos.
-- {pdf_viewer} (string): Binario para abrir PDFs (zathura, sioyek, etc.).
-- {tex_templates} (table): Diccionario de plantillas con `name` y `content`.
-- {justfile_content} (string): Contenido del archivo `.justfile` generado.
-
-==============================================================================
-5. COMANDOS                                       *xJUSTEXx-commands*
-
-:JustexNewProject                                 *:JustexNewProject*
-    Crea un nuevo proyecto: directorio, repositorio Git y archivo .tex principal.
-
-:JustexCompile {target}                           *:JustexCompile*
-    Ejecuta un comando de `just`. Targets comunes:
-    - lualatex, pdflatex, pdfxe: Compila el documento.
-    - cleanmain, cleanall: Limpia archivos temporales.
-
-:JustexCancelComp                                 *:JustexCancelComp*
-    Detiene la compilación activa inmediatamente.
-
-:JustexOpenPDF                                    *:JustexOpenPDF*
-    Abre el archivo PDF resultante en el visor configurado.
-
-:JustexSearchCTAN                                 *:JustexSearchCTAN*
-    Busca paquetes en CTAN. Abre PDFs en Zathura y HTML en el navegador.
-
-:JustexDoc                                        *:JustexDoc*
-    Abre la documentación (texdoc) del paquete bajo el cursor.
-
-:JustexLog                                        *:JustexLog*
-    Muestra el archivo de log (requiere pplatex).
-
-:JustexSearchBook                                 *:JustexSearchBook*
-    Busca libros por ISBN (Open Library) y añade la cita a `refs.bib`.
-
-:JustexSearchJournal                              *:JustexSearchJournal*
-    Busca artículos (CrossRef) y permite descargar EPUB o añadir citas BibLaTeX.
+- {project_dirs} (table): List of paths where new projects will be created.
+- {pdf_viewer} (string): Binary to open PDFs (zathura, sioyek, etc.).
+- {tex_templates} (table): Template dictionary with `name` and `content`.
+- {justfile_content} (string): Content of the generated `.justfile`.
 
 ==============================================================================
-6. FUNCIONES API                                  *xJUSTEXx-api*
+5. COMMANDS                                           *xJUSTEXx-commands*
 
-Si prefieres crear tus propios mapeos, puedes acceder a las funciones:
+:JustexNewProject                                     *:JustexNewProject*
+    Creates a new project: directory, Git repo, and main .tex file.
 
-- `require("xJUSTEXx").xCOMPILEx(command)`: Ejecuta comandos de Just.
-- `require("xJUSTEXx").xCANCELx()`: Cancela la ejecución.
-- `require("xJUSTEXx").xTEXDOCx()`: Ejecuta texdoc sobre el cursor.
-- `require("xJUSTEXx").xPPLATEXx()`: Abre el visor de logs.
+:JustexCompile {target}                               *:JustexCompile*
+    Runs a `just` command. Common targets:
+    - lualatex, pdflatex, pdfxe: Compile the document.
+    - cleanmain, cleanall: Clean temporary files.
+
+:JustexCancelComp                                     *:JustexCancelComp*
+    Immediately stops the active compilation.
+
+:JustexOpenPDF                                        *:JustexOpenPDF*
+    Opens the resulting PDF file in the configured viewer.
+
+:JustexSearchCTAN                                     *:JustexSearchCTAN*
+    Search for packages on CTAN. Opens PDFs in Zathura and HTML in browser.
+
+:JustexDoc                                            *:JustexDoc*
+    Opens the documentation (texdoc) for the package under the cursor.
+
+:JustexLog                                            *:JustexLog*
+    Displays the log file (requires pplatex).
+
+:JustexSearchBook                                     *:JustexSearchBook*
+    Search for books by ISBN (Open Library) and append citation to `refs.bib`.
+
+:JustexSearchJournal {subcmd}                      *:JustexSearchJournal*
+    Search for articles (CrossRef) and download EPUB or add BibLaTeX citations.
+    Available subcommands:
+    - search       : Starts a new search (default behavior).
+    - last_article : Opens the action menu for the last viewed article.
+    - last_results : Shows the results list from the last search.
 
 ==============================================================================
-7. RECOMENDACIONES                                *xJUSTEXx-tips*
+6. API FUNCTIONS                                          *xJUSTEXx-api*
 
-Se recomienda configurar mapeos específicos en `ftplugin/tex.lua`:
+If you prefer to create your own mappings, you can access these functions:
+
+- `require("xJUSTEXx").xCOMPILEx(command)`: Runs Just commands.
+- `require("xJUSTEXx").xCANCELx()`: Cancels execution.
+- `require("xJUSTEXx").xTEXDOCx()`: Runs texdoc on the word under cursor.
+- `require("xJUSTEXx").xPPLATEXx()`: Opens the log viewer.
+
+==============================================================================
+7. RECOMMENDATIONS                                       *xJUSTEXx-tips*
+
+It is recommended to configure specific mappings in `ftplugin/tex.lua`:
 
 >lua
-    local wk = require("which-key")
-    wk.add({
-      { "<leader>wa", "<cmd>JustexCompile lualatex<cr>", desc = "Compilar LuaLaTeX" },
-      { "<leader>wo", "<cmd>JustexOpenPDF<cr>", desc = "Ver PDF" },
-    })
+  local function keymap(map, command, desc)
+    vim.keymap.set("n", map, command, { silent = true, desc = desc })
+  end
+
+  keymap("<leader>aa", "<cmd>JustexCompile lualatex<cr>", "xLUALATEXx")
+  keymap("<leader>acc", "<cmd>JustexCompile pdflatex<cr>", "xLATEXx")
+  keymap("<leader>acx", "<cmd>JustexCompile pdfxe<cr>", "xXELATEXx")
+  keymap("<leader>add", "<cmd>JustexCompile cleanmain<cr>", "xCLEAN-MAINx")
+  keymap("<leader>ada", "<cmd>JustexCompile cleanall<cr>", "xCLEAN-ALLx")
+  keymap("<leader>aq", "<cmd>JustexCancelComp<cr>", "Cancel Comp")
+
+  keymap("<leader>ai", "<cmd>JustexSearchBook<cr>", "JustexISBN")
+  keymap("<leader>ajj", "<cmd>JustexSearchJournal<cr>", "SEARCHxISSN")
+  keymap("<leader>aja", "<cmd>JustexSearchJournal last_article<cr>", "lastXart")
+  keymap("<leader>ajs", "<cmd>JustexSearchJournal last_results<cr>", "lastXres")
+
+  keymap("<leader>am", "<cmd>JustexSearchCTAN<cr>", "JustexCTAN")
+  keymap("<leader>at", "<cmd>JustexDoc<cr>", "JustexTexdoc")
+
+  keymap("<leader>ao", "<cmd>JustexLog<cr>", "JustexLog")
+
+  keymap("<leader>az", "<cmd>JustexOpenPDF<cr>", "JustexPDF")
 <
 
-Para navegación rápida en plantillas con marcadores `<++>`:
->vim
-    nnoremap ,, <cmd>keepp /<++><cr>ca<
-    inoremap ,, <esc>0<cmd>keepp /<++><cr>ca<
-<
 ==============================================================================
 vim:tw=78:ts=8:noet:ft=help:norl:

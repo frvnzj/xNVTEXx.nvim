@@ -322,7 +322,7 @@ function M.xSEARCH_ISSNx()
 
       local url
       if search_type == "Keywords" then
-        url = "https://api.crossref.org/journals?query=" .. urlencode(input)
+        url = "https://api.crossref.org/journals?query=" .. urlencode(input) .. "&rows=100"
       else
         url = "https://api.crossref.org/journals/" .. urlencode(input:gsub("%s+", ""))
       end
@@ -365,7 +365,7 @@ function M.xSEARCH_ISSNx()
             end
 
             local art_url = string.format(
-              "https://api.crossref.org/journals/%s/works?query=%s",
+              "https://api.crossref.org/journals/%s/works?query=%s&rows=100",
               selected_journal.issn,
               urlencode(art_query)
             )

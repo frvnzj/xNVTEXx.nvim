@@ -222,8 +222,44 @@ function M.xNEW_PROJECTx()
 
   if #dirs == 1 then
     show_template_and_name_wizard(dirs[1])
+
+---Generate .gitignore file in project root
+---@public
+function M.xGITIGNOREx()
+  if not config.options.gitignore or not config.options.gitignore.enabled then
+    notify("gitignore option is disabled. Can't create .gitignore", LOG.WARN)
+    return
+  end
+
+  local current_file = vim.api.nvim_buf_get_name(0)
+  local current_dir = (current_file ~= "" and vim.bo.buftype == "") and vim.fs.dirname(current_file)
+    or vim.fn.getcwd()
+
+  local root_patterns = { ".git", ".justfile" }
+  local root_dir = vim.fs.root(current_dir, root_patterns)
+
+  if not root_dir then
+    notify("Git repository or project root not found. Cannot create .gitignore", LOG.ERROR)
+    return
+  end
+
+  local gitignore_path = vim.fs.joinpath(root_dir, ".gitignore")
+  local stat = vim.uv.fs_stat(gitignore_path)
+
+  if stat then
+    if not confirm_overwrite(gitignore_path) then
+      notify(".gitignore overwrite cancelled by user")
+      return
+    end
+  end
+
+  local gitignore_content = config.options.gitignore.content or ""
+  local ok, err = pcall(vim.fn.writefile, vim.split(gitignore_content, "\n"), gitignore_path)
+
+  if ok then
+    notify(".gitignore generated successfully at project root")
   else
-    vim.ui.select(dirs, { prompt = " Select a directory " }, show_template_and_name_wizard)
+    notify(string.format("Failed to write .gitignore: %s", tostring(err)), LOG.ERROR)
   end
 end
 

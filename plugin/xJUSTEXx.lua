@@ -26,6 +26,10 @@ vim.api.nvim_create_user_command("JustexNewProject", function()
   xJUSTEXx.xNEW_PROJECTx()
 end, {})
 
+vim.api.nvim_create_user_command("JustexGitIgnore", function()
+  xJUSTEXx.xGITIGNOREx()
+end, {})
+
 vim.api.nvim_create_user_command("JustexCompile", function(opts)
   local cmd = (opts.args ~= "") and opts.args or "lualatex"
   xJUSTEXx.xCOMPILEx(cmd)

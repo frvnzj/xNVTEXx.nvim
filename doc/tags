@@ -1,6 +1,7 @@
 :JustexCancelComp	xJUSTEXx.txt	/*:JustexCancelComp*
 :JustexCompile	xJUSTEXx.txt	/*:JustexCompile*
 :JustexDoc	xJUSTEXx.txt	/*:JustexDoc*
+:JustexGitIgnore	xJUSTEXx.txt	/*:JustexGitIgnore*
 :JustexLog	xJUSTEXx.txt	/*:JustexLog*
 :JustexNewProject	xJUSTEXx.txt	/*:JustexNewProject*
 :JustexOpenPDF	xJUSTEXx.txt	/*:JustexOpenPDF*

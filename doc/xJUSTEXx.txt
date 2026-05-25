@@ -72,7 +72,11 @@ DEFAULT OPTIONS:                                       *xJUSTEXx-defaults*
       tex_templates = {
         -- Templates: article, book, presentation
       },
-      justfile_content = [[ ... ]] -- Just structure
+      justfile_content = [[ ... ]], -- Just structure
+      gitignore = {
+        enabled = true,
+        content = [[ ... ]], -- content .gitignore
+      }
     })
 <
 
@@ -82,6 +86,7 @@ CONFIGURATION ATTRIBUTES:
 - {pdf_viewer} (string): Binary to open PDFs (zathura, sioyek, etc.).
 - {tex_templates} (table): Template dictionary with `name` and `content`.
 - {justfile_content} (string): Content of the generated `.justfile`.
+- {gitignore} (table): Availability of creating .gitignore and its content
 
 ==============================================================================
 5. COMMANDS                                           *xJUSTEXx-commands*
@@ -112,12 +117,15 @@ CONFIGURATION ATTRIBUTES:
 :JustexSearchBook                                     *:JustexSearchBook*
     Search for books by ISBN (Open Library) and append citation to `refs.bib`.
 
-:JustexSearchJournal {subcmd}                      *:JustexSearchJournal*
+:JustexSearchJournal {subcmd}                         *:JustexSearchJournal*
     Search for articles (CrossRef) and download EPUB or add BibLaTeX citations.
     Available subcommands:
     - search       : Starts a new search (default behavior).
     - last_article : Opens the action menu for the last viewed article.
     - last_results : Shows the results list from the last search.
+
+:JustexGitIgnore                                       *:JustexGitIgnore*
+    Generate the .gitignore file in a project not created with xJUSTEXx.
 
 ==============================================================================
 6. API FUNCTIONS                                          *xJUSTEXx-api*

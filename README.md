@@ -81,14 +81,25 @@ with [lazy.nvim](https://github.com/folke/lazy.nvim).
 
 ## Configuration
 
-La configuración tiene tres opciones (definición de los directorios de los
-proyectos, plantillas o contenidos con el que se iniciará el main tex y el
-contenido del .justfile que declara los comandos a usar). Las opciones por
-default son las siguientes:
+La configuración del plugin tiene cinco opciones:
 
-The configuration have three options (project directories, templates for main
-tex and the content of .justfile with the commands for compile). The default
-setup is:
+- definición de los directorios de los proyectos
+- visualizador pdf con synctex
+- plantillas o contenidos con el que se iniciará el main tex
+- el contenido del .justfile que declara los comandos a usar
+- inclusión del archivo gitignore
+
+Las opciones por default son las siguientes:
+
+The plugin configuration has five options:
+
+- definition of the project directories
+- pdf viewer with synctex
+- templates or contents with which the main tex will be started
+- the co ntent of the .justfile that declares the commands to use
+- inclusion of the gitignore file
+
+The default options are the following:
 
 ```lua
 {
@@ -96,7 +107,8 @@ setup is:
     vim.fs.normalize("~/Documents/xJUSTEXx/Articles"),
     vim.fs.normalize("~/Documents/xJUSTEXx/Research"),
   },
-  pdf_viewer = "zathura", -- "zathura" or "sioyek" for synctex; you can use other
+  -- "zathura" or "sioyek" for synctex; you can use another one but it will not have synctex functionality available
+  pdf_viewer = "zathura",
   tex_templates = {
     article = {
       name = 'Article',
@@ -185,17 +197,49 @@ cleanmain:
 cleanall:
   @latexmk -c
 ]],
+  gitignore = {
+    enabled = true,
+    content = [[
+# LaTeX auxiliary files
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.synctex.gz
+*.synctex(busy)
+*.synctex
+*.run.xml
+*.pdf
+*.toc
+*.nav
+*.snm
+*.out
+*.bbl
+*.bcf
+*.blg
+
+# Hidden files
+.justfile
+
+# Directorys
+bibliography/
+
+# Backup files
+*~
+*.bak
+]],
+  },
 }
 ```
 
 > ⚠️
-> Para abrir el PDF compilado pues establecer Zathura, Sioyek u otro vizor de
+> Para abrir el PDF compilado puedes establecer Zathura, Sioyek u otro vizor de
 > PDF en la opción pdf_viewer; sin embargo, los comandos JustexSearchCTAN y
 > JustexSearchJournal siguen dependiendo de Zathura para abrir PDF.
 
 > ⚠️
-> To open the compiled PDF, set Zathura, Sioyek or another PDF viewer to the
-> pdf_viewer option; however, the JustexSearchCTAN and JustexSearchJournal
+> To open the compiled PDF you can set Zathura, Sioyek or another PDF viewer to
+> the pdf_viewer option; however, the JustexSearchCTAN and JustexSearchJournal
 > commands still rely on Zathura to open PDF.
 
 ## Use
@@ -206,7 +250,7 @@ cleanall:
 
 ![JustexSearchJournal](assets/JustexSearchJournal.png)
 
-xJUSTEXx ofrece nueve comandos:
+xJUSTEXx ofrece diez comandos:
 
 - **JustexNewProject**: crea un proyecto nuevo (directorio del proyecto,
   repositorio Git y tex file con el nombre del proyecto).
@@ -222,9 +266,8 @@ xJUSTEXx ofrece nueve comandos:
 
   > ℹ️
   > Si ya tienes un proyecto que no fue creado con xJUSTEXx, al ejecutar
-  > `JustexCompile` se creará automáticamente .justfile para compilar. Es
-  > necesario que el buffer del archivo sea `tex`, si es del tipo `plaintex` no
-  > se creará el .justfile
+  > `JustexCompile` el plugin te preguntará si deseas que cree el archivo
+  > .justfile para compilar ya que depende de este.
 
 - **JustexCancelComp**: cancela la compilación cuando lo creas necesario.
 
@@ -269,9 +312,14 @@ xJUSTEXx ofrece nueve comandos:
   > descargar el EPUB. La accesibilidad a PDF's o EPUB's depende de la
   > disponibilidad de las revistas.
 
+- **JustexGitIgnore**: Si ya tienes un proyecto existente, este comando genera
+  el archivo .gitignore, útil para ignorar los archivos auxiliares que genera
+  LaTeX en la compilación y eliminar el ruido al controlar los cambios en el
+  proyecto.
+
 ---
 
-xJUSTEXx offers nueve commands:
+xJUSTEXx offers ten commands:
 
 - **JustexNewProject**: Create a new project (Project Board, Git repository and
   Tex File with the name of the project).
@@ -286,10 +334,9 @@ xJUSTEXx offers nueve commands:
   - `:JustexCompile cleanall`
 
   > ℹ️
-  > If you already have a project that was not created with xJUSTEXx, running
-  > `JustexCompile` will automatically create a .justfile to compile. It is
-  > necessary that the file buffer be `tex`, if it is of type `plaintex` the
-  > .justfile will not be created
+  > If you already have a project that was not created with xJUSTEXx, when you
+  > run `JustexCompile` the plugin will ask you if you want it to create the
+  > .justfile file to compile since it depends on it.
 
 - **JustexCancelComp**: cancel the compilation when you think it is necessary.
 
@@ -334,6 +381,11 @@ xJUSTEXx offers nueve commands:
   > Accessibility to PDF's or EPUB's depends on the availability of the
   > journals.
 
+- **JustexGitIgnore**: If you already have an existing project, this command
+  generates the .gitignore file, useful to ignore the auxiliary files that LaTeX
+  generates in the compilation and eliminate noise when controlling changes in
+  the project.
+
 ## Change default configuration
 
 ![xPLANTILLAx](assets/xPLANTILLAx.png)
@@ -357,7 +409,7 @@ require("xJUSTEXx").setup({
 % GFS Didot [GFSDidot](default), IM FELL English[IMFELLEnglish], Kerkis[Kerkis], Times New Roman[TNR].
 \usepackage{xJAVx-apa7}
 
-\addbibresource{~/Documentos/LaTeX/refs.bib}
+\addbibresource{refs.bib}
 
 % \hypersetup{
 %  pdftitle={<++>},

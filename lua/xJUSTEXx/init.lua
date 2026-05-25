@@ -10,6 +10,10 @@ local xISBNx = require("xJUSTEXx.xISBNx")
 local xISSNx = require("xJUSTEXx.xISSNx")
 local xCTANx = require("xJUSTEXx.xCTANx")
 
+---@id xJUSTEXx.config
+
+---Initialize the xJUSTEXx plugin with your custom configuration.
+---@param opts xJUSTEXxConfig|nil User configuration options
 function M.setup(opts)
   config.setup(opts)
 end

@@ -8,7 +8,7 @@ local CROSSREF_API = "https://api.crossref.org"
 ---@param msg string
 ---@param level integer|nil
 local function notify(msg, level)
-  vim.notify("xISBNx: " .. msg, level or vim.log.levels.INFO)
+  vim.notify("xISSNx: " .. msg, level or vim.log.levels.INFO)
 end
 
 local function notify_error(msg)

@@ -1,5 +1,11 @@
 local M = {}
 
+local u = require("xNVTEXx.utils")
+
+---xPPLATEXx window
+---@param title string
+---@param content string[]
+---@return integer buf, integer win
 local function create_floating_window(title, content)
   local buf = vim.api.nvim_create_buf(false, true)
   local width = math.floor(vim.o.columns * 0.8)
@@ -22,54 +28,37 @@ local function create_floating_window(title, content)
 
   vim.bo[buf].modifiable = false
   vim.bo[buf].buftype = "nofile"
+  vim.bo[buf].bufhidden = "wipe"
   vim.keymap.set("n", "q", "<cmd>close<cr>", { buf = buf, silent = true })
-  vim.keymap.set("n", "<Esc>", "<cmd>close<cr>", { buf = buf, silent = true })
 
   return buf, win
 end
 
-local function get_main_file_name()
-  local cwd = vim.uv.cwd()
-  local justfile = vim.fs.joinpath(cwd, ".justfile")
-  if vim.uv.fs_stat(justfile) == nil then
-    return nil
-  end
-
-  local lines = vim.fn.readfile(justfile)
-  for _, line in ipairs(lines) do
-    local main_file = line:match('main_file%s*:=%s*"([^"]+)"')
-    if main_file then
-      return vim.fs.joinpath(cwd, main_file)
-    end
-  end
-  return nil
-end
-
 --- Function to run pplatex on the current file and display the log
 function M.xPPLATEXx()
-  local main_tex = get_main_file_name()
+  local main_file, project_root = u.get_main_file_name()
 
-  if not main_tex then
-    return vim.notify(
-      "Justfile not found in the project root. Can't determine log file.",
-      vim.log.levels.ERROR
-    )
+  if not main_file or not project_root then
+    return
   end
 
-  local log_file = main_tex:gsub("%.tex$", ".log")
+  local log_name = main_file:gsub("%.tex$", ".log")
+  local log_file = vim.fs.joinpath(project_root, log_name)
 
   if vim.fn.filereadable(log_file) == 0 then
-    return vim.notify("Log file not found", vim.log.levels.WARN)
+    u.notify_warn("Log file not found")
+    return
   end
 
-  vim.system({ "pplatex", "-i", log_file }, { text = true }, function(obj)
+  vim.system({ "pplatex", "-i", log_file }, { text = true, cwd = project_root }, function(obj)
     vim.schedule(function()
       if obj.code ~= 0 and (not obj.stdout or obj.stdout == "") then
-        return vim.notify("pplatex failed", vim.log.levels.ERROR)
+        u.notify_err("pplatex failed")
+        return
       end
 
       local lines = vim.split(obj.stdout, "\n")
-      create_floating_window("xJUSTEXx log", lines)
+      create_floating_window("xNVTEXx: " .. log_name, lines)
     end)
   end)
 end

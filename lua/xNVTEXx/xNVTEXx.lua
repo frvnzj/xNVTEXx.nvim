@@ -3,21 +3,8 @@
 
 local M = {}
 
-local config = require("xJUSTEXx.config")
-
----@enum NotificationLevel
-local LOG = {
-  ERROR = vim.log.levels.ERROR,
-  WARN = vim.log.levels.WARN,
-  INFO = vim.log.levels.INFO,
-}
-
----Notify user with consistent prefix
----@param msg string The notification message
----@param level integer|nil Notification level (defaults to INFO)
-local function notify(msg, level)
-  vim.notify("xJUSTEXx: " .. msg, level or LOG.INFO)
-end
+local config = require("xNVTEXx.config")
+local u = require("xNVTEXx.utils")
 
 ---Sanitize project name for filesystem compatibility
 ---Removes accents, replaces spaces with underscores, removes special characters
@@ -133,7 +120,7 @@ local function prepare_directory(project_path)
 
     local ok, err = delete_directory_recursive(project_path)
     if not ok then
-      notify(tostring(err), LOG.ERROR)
+      u.notify_err(tostring(err))
       return false, err
     end
   end
@@ -141,7 +128,7 @@ local function prepare_directory(project_path)
   local ok, err = pcall(vim.fn.mkdir, project_path, "p")
   if not ok then
     local msg = string.format("Failed to create project directory: %s", tostring(err))
-    notify(msg, LOG.ERROR)
+    u.notify_err(msg)
     return false, msg
   end
 
@@ -163,33 +150,23 @@ local function write_file(file_path, content)
 
   if not ok then
     local msg = string.format("Failed to write file: %s", file_path)
-    notify(msg, LOG.ERROR)
+    u.notify_err(msg)
     return false, msg
   end
 
   return true
 end
 
----Create all project files (main.tex, .justfile, .gitignore)
+---Create all project files (main.tex, .gitignore)
 ---@param project_path string Root project directory
 ---@param project_name string Sanitized project name
 ---@param template_content string Template content for main .tex file
 ---@return string|nil main_tex_path Path to created main .tex file, nil on error
 local function create_project_files(project_path, project_name, template_content)
-  local justfile_content, is_just_valid = config.set_file_justfile(project_name)
-  if not is_just_valid or not justfile_content or justfile_content == "" then
-    return nil
-  end
-
   local main_tex = vim.fs.joinpath(project_path, project_name .. ".tex")
-  local justfile = vim.fs.joinpath(project_path, ".justfile")
   local gitignore = vim.fs.joinpath(project_path, ".gitignore")
 
   if not write_file(main_tex, template_content) then
-    return nil
-  end
-
-  if not write_file(justfile, justfile_content) then
     return nil
   end
 
@@ -207,7 +184,7 @@ end
 ---@param main_tex string Full path to main .tex file
 local function open_main_file(main_tex)
   if not main_tex or main_tex == "" then
-    notify("Invalid file path provided", LOG.ERROR)
+    u.notify_err("Invalid file path provided")
     return
   end
 
@@ -223,7 +200,7 @@ local function initialize_git_and_files(project_path, clean_name, template_conte
     vim.schedule(function()
       if obj.code ~= 0 then
         local err_msg = string.format("Git initialization failed (code: %d)", obj.code)
-        notify(err_msg, LOG.ERROR)
+        u.notify_err(err_msg)
         return
       end
 
@@ -233,7 +210,7 @@ local function initialize_git_and_files(project_path, clean_name, template_conte
       end
 
       open_main_file(main_tex)
-      notify(string.format("Project '%s' ready!", clean_name))
+      u.notify(string.format("Project '%s' ready!", clean_name))
     end)
   end)
 end
@@ -245,18 +222,13 @@ end
 local function setup_project(name, dir, template)
   local is_valid, error_msg = validate_setup(name, dir)
   if not is_valid then
-    notify(string.format("Setup error: %s", error_msg), LOG.ERROR)
+    u.notify_err(string.format("Setup error: %s", error_msg))
     return
   end
 
   local clean_name = sanitize_project_name(name)
   if clean_name == "" then
-    notify("Project name cannot be empty after sanitization", LOG.ERROR)
-    return
-  end
-
-  local _, is_just_valid = config.set_file_justfile(clean_name)
-  if not is_just_valid then
+    u.notify_err("Project name cannot be empty after sanitization")
     return
   end
 
@@ -275,7 +247,7 @@ local function prompt_template_and_project_name(selected_dir)
   local templates = config.options.tex_templates
 
   if not templates or vim.tbl_isempty(templates) then
-    notify("No templates available. Check your configuration", LOG.WARN)
+    u.notify_warn("No templates available. Check your configuration")
     return
   end
 
@@ -286,19 +258,19 @@ local function prompt_template_and_project_name(selected_dir)
     end,
   }, function(template_key)
     if not template_key then
-      notify("Template selection cancelled")
+      u.notify("Template selection cancelled")
       return
     end
 
     vim.ui.input({ prompt = " Project name " }, function(name)
       if not name or name == "" then
-        notify("Project creation cancelled: no name provided")
+        u.notify("Project creation cancelled: no name provided")
         return
       end
 
       local template_content = templates[template_key].content
       if not template_content then
-        notify("Selected template has no content", LOG.ERROR)
+        u.notify_err("Selected template has no content")
         return
       end
 
@@ -313,7 +285,7 @@ function M.xNEW_PROJECTx()
   local dirs = config.options.project_dirs
 
   if not dirs or #dirs == 0 then
-    notify("No project directories configured. Check your setup", LOG.WARN)
+    u.notify_warn("No project directories configured. Check your setup")
     return
   end
 
@@ -322,7 +294,7 @@ function M.xNEW_PROJECTx()
   else
     vim.ui.select(dirs, { prompt = " Select a project directory " }, function(selected_dir)
       if not selected_dir then
-        notify("Directory selection cancelled")
+        u.notify("Directory selection cancelled")
         return
       end
       prompt_template_and_project_name(selected_dir)
@@ -334,7 +306,7 @@ end
 ---@public
 function M.xGITIGNOREx()
   if not config.options.gitignore or not config.options.gitignore.enabled then
-    notify("gitignore option is disabled. Can't create .gitignore", LOG.WARN)
+    u.notify_warn("gitignore option is disabled. Can't create .gitignore")
     return
   end
 
@@ -342,11 +314,11 @@ function M.xGITIGNOREx()
   local current_dir = (current_file ~= "" and vim.bo.buftype == "") and vim.fs.dirname(current_file)
     or vim.fn.getcwd()
 
-  local root_patterns = { ".git", ".justfile" }
+  local root_patterns = { ".git" }
   local root_dir = vim.fs.root(current_dir, root_patterns)
 
   if not root_dir then
-    notify("Git repository or project root not found. Cannot create .gitignore", LOG.ERROR)
+    u.notify_err("Git repository or project root not found. Cannot create .gitignore")
     return
   end
 
@@ -355,7 +327,7 @@ function M.xGITIGNOREx()
 
   if stat then
     if not confirm_overwrite(gitignore_path) then
-      notify(".gitignore overwrite cancelled by user")
+      u.notify(".gitignore overwrite cancelled by user")
       return
     end
   end
@@ -364,9 +336,9 @@ function M.xGITIGNOREx()
   local ok, err = pcall(vim.fn.writefile, vim.split(gitignore_content, "\n"), gitignore_path)
 
   if ok then
-    notify(".gitignore generated successfully at project root")
+    u.notify(".gitignore generated successfully at project root")
   else
-    notify(string.format("Failed to write .gitignore: %s", tostring(err)), LOG.ERROR)
+    u.notify_err(string.format("Failed to write .gitignore: %s", tostring(err)))
   end
 end
 

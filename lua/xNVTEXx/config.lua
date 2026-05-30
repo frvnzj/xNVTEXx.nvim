@@ -8,20 +8,33 @@ local M = {}
 ---@field enabled? boolean Defines whether to create the .gitignore file automatically
 ---@field content? string The default content for the .gitignore file
 
----@class xJUSTEXxConfig
+---@class xNVTEXxConfig
+---@field commands? table<string, string[]> Tables of lists representing the command and arguments
 ---@field project_dirs? string[] List of absolute or relative paths where projects are saved
 ---@field pdf_viewer? "zathura"|"sioyek"|string The default viewer to use SyncTex
 ---@field tex_templates? table<string, TemplateConfig> Dictionary with available templates (article, book, presentation)
----@field justfile_content? string The ".justfile" file template that is generated to manage the compilation
 ---@field gitignore? GitignoreConfig Configuration for generating .gitignore files
 
 ---Returns the default configuration of the plugin
----@return xJUSTEXxConfig
+---@return xNVTEXxConfig
 local function set_default_config()
   return {
+    commands = {
+      lualatex = {
+        "latexmk",
+        "-lualatex",
+        "-interaction=nonstopmode",
+        "-synctex=-1",
+        "{main_file}",
+      },
+      pdflatex = { "latexmk", "-pdf", "-interaction=nonstopmode", "-synctex=-1", "{main_file}" },
+      xelatex = { "latexmk", "-pdfxe", "-interaction=nonstopmode", "-synctex=-1", "{main_file}" },
+      cleanmain = { "latexmk", "-c", "{main_file}" },
+      cleanall = { "latexmk", "-c" },
+    },
     project_dirs = {
-      vim.fs.normalize("~/Documents/xJUSTEXx/Articles"),
-      vim.fs.normalize("~/Documents/xJUSTEXx/Research"),
+      vim.fs.normalize("~/Documents/xNVTEXx/Articles"),
+      vim.fs.normalize("~/Documents/xNVTEXx/Research"),
     },
     -- "zathura" or "sioyek" for synctex; you can use another one but it will not have synctex functionality available
     pdf_viewer = "zathura",
@@ -92,24 +105,6 @@ This is a presentation template.
 ]],
       },
     },
-    justfile_content = [[
-main_file := "%s.tex"
-
-lualatex:
-  @latexmk -lualatex -interaction=nonstopmode -synctex=-1 "{{main_file}}"
-
-pdflatex:
-  @latexmk -pdf -interaction=nonstopmode -synctex=-1 "{{main_file}}"
-
-pdfxe:
-  @latexmk -pdfxe -interaction=nonstopmode -synctex=-1 "{{main_file}}"
-
-cleanmain:
-  @latexmk -c "{{main_file}}"
-
-cleanall:
-  @latexmk -c
-]],
     gitignore = {
       enabled = true,
       content = [[
@@ -145,11 +140,11 @@ bibliography/
   }
 end
 
----@type xJUSTEXxConfig|{}
-M.options = {}
+---@type xNVTEXxConfig
+M.options = set_default_config()
 
 ---Initialize the plugin with the user's custom options
----@param opts xJUSTEXxConfig|nil User-provided configuration options
+---@param opts xNVTEXxConfig|nil User-provided configuration options
 function M.setup(opts)
   local defaults = set_default_config()
 
@@ -163,20 +158,33 @@ function M.setup(opts)
   M.options = vim.tbl_deep_extend("force", defaults, opts or {})
 end
 
----General the final content of the ".justfile" file formatted with the project name
----@param project_name string The name of the main LaTeX file (without extension)
----@return string|nil content The formatted content or nil if invalid
----@return boolean is_valid True if formatting was successful, false otherwise
-function M.set_file_justfile(project_name)
-  -- Defensive check to see of '%s' is present
-  if not string.find(M.options.justfile_content, "%%s") then
+---Get command arguments with main_file substitution
+---@param cmd_key string The command identifier (e. g.: 'lualatex')
+---@param main_file string The main file name
+---@return string[]|nil cmd_args Executable array for vim.system or nil if not found
+function M.get_command(cmd_key, main_file)
+  local raw_cmd = M.options.commands[cmd_key]
+
+  if not raw_cmd then
+    local available = vim.tbl_keys(M.options.commands)
     vim.notify(
-      "[xJUSTEXx] Error: Your custom justfile_content is missing the '%s' placeholder to inject the project name.",
-      vim.log.levels.ERROR
+      string.format(
+        "xNVTEXx: Command '%s' not found. Available '%s'",
+        cmd_key,
+        table.concat(available, ", ")
+      ),
+      vim.log.levels.WARN
     )
-    return nil, false
+    return nil
   end
-  return string.format(M.options.justfile_content, project_name), true
+
+  local processed_cmd = {}
+  for _, arg in ipairs(raw_cmd) do
+    local processed_arg = arg:gsub("{main_file}", main_file)
+    table.insert(processed_cmd, processed_arg)
+  end
+
+  return processed_cmd
 end
 
 return M

@@ -1,6 +1,7 @@
 local M = {}
 
-local config = require("xJUSTEXx.config")
+local config = require("xNVTEXx.config")
+local u = require("xNVTEXx.utils")
 
 local VIEWERS_CONFIG = {
   zathura = function(pdf, tex, line, col)
@@ -26,31 +27,25 @@ local VIEWERS_CONFIG = {
   end,
 }
 
-local function get_main_file_name()
-  local cwd = vim.uv.cwd()
-  local justfile = vim.fs.joinpath(cwd, ".justfile")
-  if vim.uv.fs_stat(justfile) == nil then
-    return nil
-  end
-
-  local lines = vim.fn.readfile(justfile)
-  for _, line in ipairs(lines) do
-    local main_file = line:match('main_file%s*:=%s*"([^"]+)"')
-    if main_file then
-      return vim.fs.joinpath(cwd, main_file)
-    end
-  end
-  return nil
-end
-
+---Calculate the absolute path of the PDF
+---@return string
 local function get_pdf_path()
-  local main_tex = get_main_file_name()
-  if main_tex then
-    return main_tex:gsub("%.tex$", ".pdf")
+  local main_file, project_root = u.get_main_file_name()
+  if main_file and project_root then
+    local pdf_file = main_file:gsub("%.tex$", ".pdf")
+    return vim.fs.joinpath(project_root, pdf_file)
   end
+
   return vim.fn.expand("%:p:r") .. ".pdf"
 end
 
+---Build the specific command for the selected viewer
+---@param viewer string
+---@param pdf_path string
+---@param tex_path string
+---@param line integer
+---@param col integer
+---@return string[]
 local function build_viewer_cmd(viewer, pdf_path, tex_path, line, col)
   local builder = VIEWERS_CONFIG[viewer]
   if builder then
@@ -60,16 +55,16 @@ local function build_viewer_cmd(viewer, pdf_path, tex_path, line, col)
 end
 
 function M.xVIEW_PDFx()
-  local viewer = config.options.pdf_viewer
+  local viewer = config.options.pdf_viewer or "zathura"
   local file_pdf = get_pdf_path()
 
   if vim.fn.filereadable(file_pdf) == 0 then
-    return vim.notify(
+    u.notify_warn(
       "PDF not found: "
         .. vim.fn.fnamemodify(file_pdf, ":t")
-        .. ". Make sure the project is compiled.",
-      vim.log.levels.WARN
+        .. ". Make sure the project is compiled."
     )
+    return
   end
 
   local current_tex = vim.fn.expand("%:p")
@@ -81,12 +76,12 @@ function M.xVIEW_PDFx()
   vim.system(cmd, { detach = true }, function(obj)
     if obj.code ~= 0 and obj.code ~= nil then
       vim.schedule(function()
-        vim.notify("Error opening viewer: " .. viewer, vim.log.levels.ERROR)
+        u.notify_err("Error opening viewer: " .. viewer)
       end)
     end
   end)
 
-  vim.notify("Opening " .. viewer .. "...", vim.log.levels.INFO)
+  u.notify("Opening " .. viewer .. "...")
 end
 
 return M

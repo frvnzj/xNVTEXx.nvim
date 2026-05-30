@@ -140,7 +140,7 @@ local function extract_media_urls(article)
 end
 
 local function extract_article_title(article)
-  return sanitize_filename(safe_get(article, "title", 1) or "article_xJUSTEXx")
+  return sanitize_filename(safe_get(article, "title", 1) or "article_xNVTEXx")
 end
 
 local handle_article_actions

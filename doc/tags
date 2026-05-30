@@ -1,4 +1,4 @@
-:NVTexCancel	xNVTEXx.txt	/*:NVTexCancel*
+:NVTexCancelComp	xNVTEXx.txt	/*:NVTexCancelComp*
 :NVTexCompile	xNVTEXx.txt	/*:NVTexCompile*
 :NVTexDoc	xNVTEXx.txt	/*:NVTexDoc*
 :NVTexGitIgnore	xNVTEXx.txt	/*:NVTexGitIgnore*

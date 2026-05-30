@@ -168,7 +168,7 @@ Pressing `:NVTexCompile <Tab>` will now cleanly expose `my_fast_pdf` as an optio
     - Built-in targets include: `lualatex`, `pdflatex`, `xelatex`,
       `cleanmain`, and `cleanall`.
 
-:NVTexCancel                                                   *:NVTexCancel*
+:NVTexCancelComp                                                   *:NVTexCancelComp*
     Immediately terminates the active asynchronous compilation background job.
     Safely releases internal process locks and notifies via `nvim_echo`.
 

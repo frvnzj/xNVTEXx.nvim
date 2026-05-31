@@ -6,62 +6,6 @@ local M = {}
 local config = require("xNVTEXx.config")
 local u = require("xNVTEXx.utils")
 
----Sanitize project name for filesystem compatibility
----Removes accents, replaces spaces with underscores, removes special characters
----@param str string The raw project name
----@return string Sanitized project name
----@example
----local sanitized = sanitize_project_name("Proyecto Español")
---- -- returns: "Proyecto_Espanol"
-local function sanitize_project_name(str)
-  local translation_table = {
-    ["á"] = "a",
-    ["é"] = "e",
-    ["í"] = "i",
-    ["ó"] = "o",
-    ["ú"] = "u",
-    ["ü"] = "u",
-    ["ñ"] = "n",
-    ["ç"] = "c",
-    ["Á"] = "A",
-    ["É"] = "E",
-    ["Í"] = "I",
-    ["Ó"] = "O",
-    ["Ú"] = "U",
-    ["Ü"] = "U",
-    ["Ñ"] = "N",
-    ["Ç"] = "C",
-    ["à"] = "a",
-    ["è"] = "e",
-    ["ì"] = "i",
-    ["ò"] = "o",
-    ["ù"] = "u",
-    ["â"] = "a",
-    ["ê"] = "e",
-    ["î"] = "i",
-    ["ô"] = "o",
-    ["û"] = "u",
-    ["ä"] = "a",
-    ["ë"] = "e",
-    ["ï"] = "i",
-    ["ö"] = "o",
-    ["ß"] = "ss",
-  }
-
-  local sanitized = str:gsub("[%z\1-\127\194-\244][\128-\191]*", function(c)
-    return translation_table[c] or c
-  end)
-
-  sanitized = sanitized:gsub("[%s%.]+", "_")
-  sanitized = sanitized:gsub("[^%w%-_]", "")
-
-  if sanitized:sub(1, 1) == "-" then
-    sanitized = "p" .. sanitized
-  end
-
-  return sanitized
-end
-
 ---Validate project setup parameters
 ---@param name string|nil The project name
 ---@param dir string|nil The target directory
@@ -81,15 +25,6 @@ local function validate_setup(name, dir)
   end
 
   return true
-end
-
----Request user confirmation for overwriting existing project
----@param project_path string Path to existing project
----@return boolean user_confirmed
-local function confirm_overwrite(project_path)
-  local choice =
-    vim.fn.confirm(string.format("'%s' already exists. Overwrite?", project_path), "&Yes\n&No", 2)
-  return choice == 1
 end
 
 ---Recursively delete directory contents
@@ -128,28 +63,6 @@ local function prepare_directory(project_path)
   local ok, err = pcall(vim.fn.mkdir, project_path, "p")
   if not ok then
     local msg = string.format("Failed to create project directory: %s", tostring(err))
-    u.notify_err(msg)
-    return false, msg
-  end
-
-  return true
-end
-
----Write content to file
----@param file_path string Full path to file
----@param content string File content to write
----@return boolean success
----@return string|nil error_message
-local function write_file(file_path, content)
-  if not content or content == "" then
-    return false, "Cannot write empty content to file"
-  end
-
-  local lines = vim.split(content, "\n")
-  local ok = pcall(vim.fn.writefile, lines, file_path)
-
-  if not ok then
-    local msg = string.format("Failed to write file: %s", file_path)
     u.notify_err(msg)
     return false, msg
   end

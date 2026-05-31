@@ -1,39 +1,33 @@
 local M = {}
 
+local u = require("xNVTEXx.utils")
+
 M._last_article = nil
 M._last_results = nil
 
 local CROSSREF_API = "https://api.crossref.org"
 
----@param msg string
----@param level integer|nil
-local function notify(msg, level)
-  vim.notify("xISSNx: " .. msg, level or vim.log.levels.INFO)
-end
+local function get_bib_target_path()
+  local _, project_root = u.get_main_file_name()
 
-local function notify_error(msg)
-  notify(msg, vim.log.levels.ERROR)
-end
-
-local function notify_warn(msg)
-  notify(msg, vim.log.levels.WARN)
-end
-
-local function get_download_dir()
-  local project_root = vim.fs.root(0, { ".git", ".gitignore", ".justfile" })
-
-  local target_dir = project_root and (project_root .. "/bibliography/")
-    or vim.fn.expand("~/Downloads/")
-
-  if vim.fn.isdirectory(target_dir) == 0 then
-    vim.fn.mkdir(target_dir, "p")
+  if not project_root then
+    local buf_name = vim.api.nvim_buf_get_name(0)
+    project_root = buf_name ~= "" and vim.fs.dirname(buf_name) or vim.fn.getcwd()
   end
 
-  return target_dir
+  return vim.fs.joinpath(project_root, "refs.bib")
 end
 
-local function sanitize_filename(filename)
-  return filename:gsub("%s+", "_"):gsub("[%c%?%*\\/<>|:\"']", "")
+local function get_media_target_dir()
+  local _, project_root = u.get_main_file_name()
+  local target = project_root and vim.fs.joinpath(project_root, "bibliography")
+    or vim.fn.expand("~/Downloads")
+
+  if vim.fn.isdirectory(target) == 0 then
+    vim.fn.mkdir(target, "p")
+  end
+
+  return target
 end
 
 local function urlencode(str)
@@ -115,7 +109,7 @@ local function extract_media_urls(article)
 end
 
 local function extract_article_title(article)
-  return sanitize_filename(safe_get(article, "title", 1) or "article_xNVTEXx")
+  return u.sanitize_name(safe_get(article, "title", 1) or "article_xNVTEXx")
 end
 
 local handle_article_actions
@@ -125,19 +119,19 @@ local function download_file(url, filename, opts)
 
   local curl_args = { "curl", "-L", "-o", filename, url }
 
-  notify("Starting download: " .. filename)
+  u.notify("Starting download: " .. vim.fn.fnamemodify(filename, ":t"))
 
   vim.system(curl_args, { detach = opts.detach ~= false }, function(obj)
     vim.schedule(function()
       if obj.code == 0 then
-        notify("Downloaded: " .. vim.fn.fnamemodify(filename, ":t"))
+        u.notify("Downloaded: " .. vim.fn.fnamemodify(filename, ":t"))
 
         if opts.callback then
           opts.callback(true)
         end
       else
         local detail = obj.stderr or string.format("Code %d", obj.code)
-        notify_error("Download failed: " .. detail)
+        u.notify_err("Download failed: " .. detail)
         if opts.callback then
           opts.callback(false)
         end
@@ -147,12 +141,12 @@ local function download_file(url, filename, opts)
 end
 
 local function handle_bibtex(article)
-  http_get(
+  u.http_get(
     "https://doi.org/" .. article.DOI,
     { Accept = "application/x-bibtex" },
     function(bib, err)
       if err or not bib then
-        return notify_error("Error getting BibTeX: " .. (err or "No response"))
+        return u.notify_err("Error getting BibTeX: " .. (err or "No response"))
       end
 
       local formatted_bib = bib:gsub(",%s*", ",\n  "):gsub("%s*}%s*$", "\n}")
@@ -175,24 +169,24 @@ local function handle_bibtex(article)
         end
 
         if choice == "Append to refs.bib" then
-          local bib_path = get_download_dir() .. "refs.bib"
+          local bib_path = get_bib_target_path()
           local bib_file = io.open(bib_path, "a")
 
           if not bib_file then
-            return notify_error("Cannot open refs.bib for writing")
+            return u.notify_err("Cannot open refs.bib for writing")
           end
 
           bib_file:write("\n" .. formatted_bib .. "\n")
           bib_file:close()
 
-          notify("Saved to: " .. bib_path)
+          u.notify("Saved to: " .. vim.fn.fnamemodify(bib_path, ":t"))
 
           vim.defer_fn(function()
             handle_article_actions(article)
           end, 100)
         elseif choice == "Copy to clipboard" then
           vim.fn.setreg("+", formatted_bib)
-          notify("BibTeX copied to clipboard")
+          u.notify("BibTeX copied to clipboard")
 
           vim.defer_fn(function()
             handle_article_actions(article)
@@ -205,7 +199,7 @@ end
 
 local function handle_pdf(article, pdf_url)
   if not pdf_url then
-    notify_warn("No PDF available for this article")
+    u.notify_warn("No PDF available for this article")
     return
   end
 
@@ -228,11 +222,11 @@ local function handle_pdf(article, pdf_url)
     end
 
     local clean_title = extract_article_title(article)
-    local download_dir = get_download_dir()
-    local filename = download_dir .. clean_title .. ".pdf"
+    local download_dir = get_media_target_dir()
+    local filename = vim.fs.joinpath(download_dir, clean_title .. ".pdf")
 
     if choice == "Only view PDF" then
-      notify("Opening PDF...")
+      u.notify("Opening PDF...")
       vim.system({ "zathura", pdf_url }, { detach = true })
 
       vim.defer_fn(function()
@@ -256,13 +250,13 @@ end
 
 local function handle_epub(article, epub_url)
   if not epub_url then
-    notify_warn("No EPUB available for this article")
+    u.notify_warn("No EPUB available for this article")
     return
   end
 
   local clean_title = extract_article_title(article)
-  local download_dir = get_download_dir()
-  local filename = download_dir .. clean_title .. ".epub"
+  local download_dir = get_media_target_dir()
+  local filename = vim.fs.joinpath(download_dir, clean_title .. ".epub")
 
   download_file(epub_url, filename, {
     callback = function(success)
@@ -320,21 +314,21 @@ local function search_articles(issn, query)
   local url =
     string.format("%s/journals/%s/works?query=%s&rows=100", CROSSREF_API, issn, urlencode(query))
 
-  notify("Searching for articles...")
+  u.notify("Searching for articles...")
 
-  http_get(url, nil, function(body, err)
+  u.http_get(url, nil, function(body, err)
     if err or not body then
-      return notify_error("Search failed: " .. (err or "No response"))
+      return u.notify_err("Search failed: " .. (err or "No response"))
     end
 
     local data, decode_err = safe_json_decode(body)
     if not data then
-      return notify_error(decode_err)
+      return u.notify_err(tostring(decode_err))
     end
 
     local articles = safe_get(data, "message", "items") or {}
     if #articles == 0 then
-      return notify_warn("No articles found")
+      return u.notify_warn("No articles found")
     end
 
     M._last_results = articles
@@ -358,23 +352,23 @@ local function search_journals(search_type, input)
     url = CROSSREF_API .. "/journals/" .. urlencode(input:gsub("%s+", ""))
   end
 
-  notify("Searching journals...")
+  u.notify("Searching journals...")
 
-  http_get(url, nil, function(body, err)
+  u.http_get(url, nil, function(body, err)
     if err or not body then
-      return notify_error("Search failed: " .. (err or "No response"))
+      return u.notify_err("Search failed: " .. (err or "No response"))
     end
 
     local data, decode_err = safe_json_decode(body)
     if not data then
-      return notify_error(decode_err)
+      return u.notify_err(tostring(decode_err))
     end
 
     local items = search_type == "Keywords" and safe_get(data, "message", "items")
       or { safe_get(data, "message") }
 
     if not items or #items == 0 then
-      return notify_warn("No journals found")
+      return u.notify_warn("No journals found")
     end
 
     local journal_map = {}
@@ -422,14 +416,14 @@ end
 
 function M.xLAST_ARTICLEx()
   if not M._last_article then
-    return notify_warn("No recent article")
+    return u.notify_warn("No recent article")
   end
   handle_article_actions(M._last_article)
 end
 
 function M.xLAST_RESULTSx()
   if not M._last_results or #M._last_results == 0 then
-    return notify_warn("No recent searches")
+    return u.notify_warn("No recent searches")
   end
 
   show_select(

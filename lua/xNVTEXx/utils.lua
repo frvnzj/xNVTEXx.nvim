@@ -156,4 +156,113 @@ function M.get_main_file_name()
   return main_file, project_root
 end
 
+---Makes an HTTP GET request using curl asynchronously
+---@param url string
+---@param headers table|nil Header Dictionary { ["Authorization"] = "Bearer ..." }
+---@param cb function Function callback(stdout, stderr)
+function M.http_get(url, headers, cb)
+  local args = { "curl", "-sSL", url }
+
+  if headers then
+    for k, v in pairs(headers) do
+      table.insert(args, "-H")
+      table.insert(args, k .. ": " .. v)
+    end
+  end
+
+  vim.system(args, { text = true }, function(obj)
+    vim.schedule(function()
+      if obj.code ~= 0 then
+        local stderr_clean = obj.stderr and vim.trim(obj.stderr) or ""
+        local error_msg = (stderr_clean ~= "") and stderr_clean
+          or ("Connection error (Code " .. obj.code .. ")")
+        cb(nil, error_msg)
+      else
+        cb(obj.stdout, nil)
+      end
+    end)
+  end)
+end
+
+---Sanitize project name for filesystem compatibility
+---Removes accents, replaces spaces with underscores, removes special characters
+---@param str string The raw project/file name
+---@return string Sanitized string
+function M.sanitize_name(str)
+  local translation_table = {
+    ["á"] = "a",
+    ["é"] = "e",
+    ["í"] = "i",
+    ["ó"] = "o",
+    ["ú"] = "u",
+    ["ü"] = "u",
+    ["ñ"] = "n",
+    ["ç"] = "c",
+    ["Á"] = "A",
+    ["É"] = "E",
+    ["Í"] = "I",
+    ["Ó"] = "O",
+    ["Ú"] = "U",
+    ["Ü"] = "U",
+    ["Ñ"] = "N",
+    ["Ç"] = "C",
+    ["à"] = "a",
+    ["è"] = "e",
+    ["ì"] = "i",
+    ["ò"] = "o",
+    ["ù"] = "u",
+    ["â"] = "a",
+    ["ê"] = "e",
+    ["î"] = "i",
+    ["ô"] = "o",
+    ["û"] = "u",
+    ["ä"] = "a",
+    ["ë"] = "e",
+    ["ï"] = "i",
+    ["ö"] = "o",
+    ["ß"] = "ss",
+  }
+
+  local sanitized = str:gsub("[%z\1-\127\194-\244][\128-\191]*", function(c)
+    return translation_table[c] or c
+  end)
+
+  sanitized = sanitized:gsub("[%s%.]+", "_")
+  sanitized = sanitized:gsub("[^%w%-_]", "")
+
+  if sanitized:sub(1, 1) == "-" then
+    sanitized = "p" .. sanitized
+  end
+
+  return sanitized
+end
+
+---Request user confirmation for overwriting or appending an action
+---@param prompt_msg string The message to show the user
+---@return boolean user_confirmed
+function M.confirm_action(prompt_msg)
+  local choice = vim.fn.confirm(prompt_msg, "&Yes\n&No", 2)
+  return choice == 1
+end
+
+---Write content string cleanly to a target file (Creates file if missing, overwrites if existing)
+---@param file_path string Full path to file
+---@param content string File content to write
+---@return boolean success
+function M.write_file(file_path, content)
+  if not content or content == "" then
+    return false
+  end
+
+  local lines = vim.split(content, "\n")
+  local ok = pcall(vim.fn.writefile, lines, file_path)
+
+  if not ok then
+    M.notify_err("Failed to write file: " .. file_path)
+    return false
+  end
+
+  return true
+end
+
 return M

@@ -62,31 +62,6 @@ local function safe_get(tbl, ...)
   return tbl
 end
 
----@param url string
----@param headers table|nil
----@param cb function
-local function http_get(url, headers, cb)
-  local args = { "curl", "-sSL", url }
-
-  if headers then
-    for k, v in pairs(headers) do
-      table.insert(args, "-H")
-      table.insert(args, k .. ": " .. v)
-    end
-  end
-
-  vim.system(args, { text = true }, function(obj)
-    vim.schedule(function()
-      if obj.code ~= 0 then
-        local error_msg = obj.stderr or ("Error code" .. obj.code)
-        cb(nil, error_msg)
-      else
-        cb(obj.stdout, nil)
-      end
-    end)
-  end)
-end
-
 ---@param json_str string
 ---@return table|nil, string|nil
 local function safe_json_decode(json_str)

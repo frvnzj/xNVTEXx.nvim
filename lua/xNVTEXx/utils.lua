@@ -13,19 +13,19 @@ local COMMON_MAIN_FILES = { "main.tex", "root.tex", "index.tex", "master.tex" }
 ---Notify user with consistent prefix
 ---@param msg string The notification message
 function M.notify(msg)
-  vim.notify("xNVTEXx: " .. msg, M.LOG.INFO)
+  vim.notify("[xNVTEXx] " .. msg, M.LOG.INFO)
 end
 
 ---Notify user with consistent prefix
 ---@param msg string The notification message
 function M.notify_err(msg)
-  vim.notify("xNVTEXx: " .. msg, M.LOG.ERROR)
+  vim.notify("[xNVTEXx] " .. msg, M.LOG.ERROR)
 end
 
 ---Notify user with consistent prefix
 ---@param msg string The notification message
 function M.notify_warn(msg)
-  vim.notify("xNVTEXx: " .. msg, M.LOG.WARN)
+  vim.notify("[xNVTEXx] " .. msg, M.LOG.WARN)
 end
 
 -- Initial global cache to avoid forbidden calls in fast-event threads (E5560)

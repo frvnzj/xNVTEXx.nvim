@@ -1,28 +1,10 @@
 --- Module for handling ISBN validation, fetching book data, and generating BibTeX entries.
 local M = {}
 
+local u = require("xNVTEXx.utils")
+
 local OPENLIBRARY_API = "https://openlibrary.org/api/books?bibkeys=ISBN:%s&jscmd=data&format=json"
 local BIBTEX_FILE = "refs.bib"
-
----@param msg string
----@param level integer|nil
-local function notify(msg, level)
-  vim.notify("xISBNx: " .. msg, level or vim.log.levels.INFO)
-end
-
----@param url string
----@param cb function
-local function http_get(url, cb)
-  vim.system({ "curl", "-sSL", url }, { text = true }, function(obj)
-    vim.schedule(function()
-      if obj.code ~= 0 then
-        cb(nil, "Connection error (Code " .. obj.code .. ")")
-      else
-        cb(obj.stdout, nil)
-      end
-    end)
-  end)
-end
 
 --- Extracts and normalizes book data from the Open Library API response.
 --- @param value table
@@ -68,7 +50,7 @@ local function get_title_word(title)
   end
 
   for word in title:gmatch("[%wáàèìòùéíóúüÁÀÉÈÍÌÓÒÚÙÜßñÑ]+") do
-    if #word > 3 then
+    if vim.fn.strcharlen(word) > 3 then
       return word
     end
   end
@@ -140,38 +122,40 @@ local function build_bibtex_entry(book_data, isbn)
   return table.concat(fields, "\n")
 end
 
---- Creates directory if it doesn't exist.
---- @param dir_path string
---- @return boolean true
-local function ensure_directory(dir_path)
-  local result = vim.fn.mkdir(dir_path, "p")
-  return result == 1 or vim.fn.isdirectory(dir_path) == 1
-end
-
 --- Saves the selected BibTeX entry to a file and opens it in a split window.
 --- @param selected_bibtex string
 local function save_and_open_bib(selected_bibtex)
-  local bib_dir = vim.fn.expand("%:p:h")
-  local bib_file = bib_dir .. "/" .. BIBTEX_FILE
+  local _, project_root = u.get_main_file_name()
 
-  if not ensure_directory(bib_dir) then
-    return notify("Could not create directory", vim.log.levels.ERROR)
+  if not project_root then
+    local buf_name = vim.api.nvim_buf_get_name(0)
+    project_root = buf_name ~= "" and vim.fs.dirname(buf_name) or vim.fn.getcwd()
   end
+
+  local stat = vim.uv.fs_stat(project_root)
+  if not stat or stat.type ~= "directory" then
+    u.debug_log("Target directory does not exist: " .. project_root)
+    return
+  end
+
+  local bib_file = vim.fs.joinpath(project_root, BIBTEX_FILE)
 
   local file, err = io.open(bib_file, "a")
   if not file then
-    return notify("Error opening .bib file: " .. (err or "Unknown"), vim.log.levels.ERROR)
+    u.notify("Error opening .bib file: " .. (err or "Unknown"))
+    return
   end
 
   local success, write_err = file:write("\n" .. selected_bibtex .. "\n")
   file:close()
 
   if not success then
-    return notify("Error writing to .bib: " .. (write_err or "Unknown"), vim.log.levels.ERROR)
+    u.notify_err("Error writing to .bib: " .. (write_err or "Unknown"))
+    return
   end
 
-  notify("Entry added to " .. bib_file)
-  vim.cmd("vsplit " .. bib_file)
+  u.notify("Entry added to " .. bib_file)
+  vim.cmd("vsplit " .. vim.fn.fnameescape(bib_file))
 end
 
 --- Validates and formats an ISBN string.
@@ -184,7 +168,7 @@ local function validate_isbn(isbn_input)
 
   local format_isbn = isbn_input:gsub("[^%dX]", "")
   if #format_isbn ~= 10 and #format_isbn ~= 13 then
-    notify("Invalid ISBN (must be 10 or 13 digits)", vim.log.levels.ERROR)
+    u.notify_err("Invalid ISBN (must be 10 or 13 digits)")
     return nil
   end
 
@@ -221,22 +205,22 @@ function M.xSEARCH_ISBNx()
 
     local url = string.format(OPENLIBRARY_API, format_isbn)
 
-    notify("Searching Open Library...")
+    u.notify("Searching Open Library...")
 
-    http_get(url, function(body, http_err)
+    u.http_get(url, nil, function(body, http_err)
       if http_err or not body then
-        return notify(http_err or "No data received", vim.log.levels.ERROR)
+        return u.notify_err(http_err or "No data received")
       end
 
       local ok, data = pcall(vim.fn.json_decode, body)
       if not ok or not data or vim.tbl_isempty(data) then
-        return notify("No data found", vim.log.levels.WARN)
+        return u.notify_warn("No data found")
       end
 
       local options = build_book_options(data)
 
       if #options == 0 then
-        return notify("No books found", vim.log.levels.WARN)
+        return u.notify_warn("No books found")
       elseif #options == 1 then
         save_and_open_bib(options[1].bibtex)
       else

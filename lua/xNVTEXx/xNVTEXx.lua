@@ -49,7 +49,7 @@ local function prepare_directory(project_path)
   local stat = vim.uv.fs_stat(project_path)
 
   if stat then
-    if not confirm_overwrite(project_path) then
+    if not u.confirm_action(string.format("'%s' already exists. Overwrite?", project_path)) then
       return false, "Project creation cancelled by user"
     end
 
@@ -79,13 +79,13 @@ local function create_project_files(project_path, project_name, template_content
   local main_tex = vim.fs.joinpath(project_path, project_name .. ".tex")
   local gitignore = vim.fs.joinpath(project_path, ".gitignore")
 
-  if not write_file(main_tex, template_content) then
+  if not u.write_file(main_tex, template_content) then
     return nil
   end
 
   if config.options.gitignore and config.options.gitignore.enabled then
     local gitignore_content = config.options.gitignore.content or ""
-    if not write_file(gitignore, gitignore_content) then
+    if not u.write_file(gitignore, gitignore_content) then
       return nil
     end
   end
@@ -139,7 +139,7 @@ local function setup_project(name, dir, template)
     return
   end
 
-  local clean_name = sanitize_project_name(name)
+  local clean_name = u.sanitize_name(name)
   if clean_name == "" then
     u.notify_err("Project name cannot be empty after sanitization")
     return
@@ -239,19 +239,16 @@ function M.xGITIGNOREx()
   local stat = vim.uv.fs_stat(gitignore_path)
 
   if stat then
-    if not confirm_overwrite(gitignore_path) then
+    if not u.confirm_action(string.format("'%s' already exists. Overwrite?", gitignore_path)) then
       u.notify(".gitignore overwrite cancelled by user")
       return
     end
   end
 
   local gitignore_content = config.options.gitignore.content or ""
-  local ok, err = pcall(vim.fn.writefile, vim.split(gitignore_content, "\n"), gitignore_path)
 
-  if ok then
+  if u.write_file(gitignore_path, gitignore_content) then
     u.notify(".gitignore generated successfully at project root")
-  else
-    u.notify_err(string.format("Failed to write .gitignore: %s", tostring(err)))
   end
 end
 

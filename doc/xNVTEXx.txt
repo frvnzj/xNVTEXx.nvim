@@ -150,6 +150,9 @@ Example adding a custom bibtex compilation step:
       }
     })
 <
+Make sure to use the `{main_file}` placeholder to ensure that the main project
+file is compiled.
+
 Pressing `:NVTexCompile <Tab>` will now cleanly expose `my_fast_pdf` as an option.
 
 ==============================================================================

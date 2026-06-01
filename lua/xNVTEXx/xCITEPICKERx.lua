@@ -122,7 +122,7 @@ end
 
 ---Creates and displays the citation picker
 ---Allows multi-selection of bibliography entries and macro selection
----@function M.xCITEPICKx
+---@function M.xCITEPICKERx
 function M.xCITEPICKERx()
   local bib_file = get_bib_target_path()
 
@@ -164,7 +164,7 @@ function M.xCITEPICKERx()
         end
 
         local macro_options = #keys == 1 and MACRO_CONFIG.single or MACRO_CONFIG.multiple
-        local prompt = string.format(" Selecciona el macro para %d cita(s) ", #keys)
+        local prompt = string.format(" Select the macro for %d citation(s) ", #keys)
 
         vim.ui.select(macro_options, {
           prompt = prompt,

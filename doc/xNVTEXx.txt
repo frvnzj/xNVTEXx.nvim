@@ -1,15 +1,15 @@
-*xNVTEXx*   LaTeX project manager with Just and Neovim
+*xNVTEXx*   LaTeX project manager with Neovim
 
 ==============================================================================
 CONTENTS                                                  *xNVTEXx-contents*
 
-1. Introduction...................................|xNVTEXx-intro|
-2. Dependencies...................................|xNVTEXx-deps|
-3. Installation..................................|xNVTEXx-install|
-4. Configuration.................................|xNVTEXx-config|
-5. Commands......................................|xNVTEXx-commands|
-6. API Functions.................................|xNVTEXx-api|
-7. Recommendations................................|xNVTEXx-tips|
+1. Introduction............................................|xNVTEXx-intro|
+2. Dependencies............................................|xNVTEXx-deps|
+3. Installation............................................|xNVTEXx-install|
+4. Configuration...........................................|xNVTEXx-config|
+5. Commands................................................|xNVTEXx-commands|
+6. API Functions...........................................|xNVTEXx-api|
+7. Recommendations.........................................|xNVTEXx-tips|
 
 ==============================================================================
 1. INTRODUCTION                                           *xNVTEXx-intro*
@@ -215,7 +215,7 @@ Pressing `:NVTexCompile <Tab>` will now cleanly expose `my_fast_pdf` as an optio
 
 If you prefer to create your own mappings, you can access these functions:
 
-- `require("xNVTEXx").xCOMPILEx(command)`: Runs Just commands.
+- `require("xNVTEXx").xCOMPILEx(command)`: Runs LaTeX commands.
 - `require("xNVTEXx").xCANCELx()`: Cancels execution.
 - `require("xNVTEXx").xTEXDOCx()`: Runs texdoc on the word under cursor.
 - `require("xNVTEXx").xPPLATEXx()`: Opens the log viewer.
@@ -243,7 +243,7 @@ It is recommended to configure specific mappings in `ftplugin/tex.lua`:
   keymap("<leader>ajs", "<cmd>NVTexSearchJournal last_results<cr>", "lastXres")
 
   keymap("<leader>am", "<cmd>NVTexSearchCTAN<cr>", "NVTexCTAN")
-  keymap("<leader>at", "<cmd>NVTexDoc<cr>", "NVTexTexdoc")
+  keymap("<leader>at", "<cmd>NVTexDoc<cr>", "NVTexDoc")
 
   keymap("<leader>ao", "<cmd>NVTexLog<cr>", "NVTexLog")
 

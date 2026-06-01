@@ -41,6 +41,10 @@ vim.api.nvim_create_user_command("NVTexCancelComp", function()
   xNVTEXx.xCANCELx()
 end, {})
 
+vim.api.nvim_create_user_command("NVTexCitePicker", function()
+  xNVTEXx.xCITEPICKERx()
+end, {})
+
 vim.api.nvim_create_user_command("NVTexOpenPDF", function()
   xNVTEXx.xVIEWERx()
 end, {})

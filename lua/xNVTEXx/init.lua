@@ -9,6 +9,7 @@ local xPPLATEXx = require("xNVTEXx.xPPLATEXx")
 local xISBNx = require("xNVTEXx.xISBNx")
 local xISSNx = require("xNVTEXx.xISSNx")
 local xCTANx = require("xNVTEXx.xCTANx")
+local xCITEPICKERx = require("xNVTEXx.xCITEPICKERx")
 
 ---@id xNVTEXx.config
 
@@ -30,5 +31,6 @@ M.xISSNx = xISSNx.xSEARCH_ISSNx
 M.xLAST_ARTICLEx = xISSNx.xLAST_ARTICLEx
 M.xLAST_RESULTSx = xISSNx.xLAST_RESULTSx
 M.xCTANx = xCTANx.xSEARCH_CTANx
+M.xCITEPICKERx = xCITEPICKERx.xCITEPICKERx
 
 return M

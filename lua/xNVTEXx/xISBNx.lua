@@ -212,7 +212,7 @@ function M.xSEARCH_ISBNx()
         return u.notify_err(http_err or "No data received")
       end
 
-      local ok, data = pcall(vim.fn.json_decode, body)
+      local ok, data = pcall(vim.json.decode, body)
       if not ok or not data or vim.tbl_isempty(data) then
         return u.notify_warn("No data found")
       end

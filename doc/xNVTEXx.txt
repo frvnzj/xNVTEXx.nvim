@@ -40,7 +40,6 @@ The following tools are required for full functionality:
 - Neovim >= 0.12
 - Git
 - Zathura (Default PDF viewer)
-- Curl (For API requests)
 - TeXlive (including latexmk for default commands)
 - pplatex (Optional, for |:NVTexLog|)
 

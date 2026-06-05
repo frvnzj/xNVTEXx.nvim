@@ -62,7 +62,6 @@ Main Features:
 - Neovim >= 0.12
 - Git
 - Zathura
-- Curl
 - ¡Obviamente TeXlive!
 
 ## Install

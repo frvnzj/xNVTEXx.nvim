@@ -156,29 +156,51 @@ function M.get_main_file_name()
   return main_file, project_root
 end
 
----Makes an HTTP GET request using curl asynchronously
+---Makes an HTTP GET request using Neovim's native vim.net.request asynchronously
 ---@param url string
 ---@param headers table|nil Header Dictionary { ["Authorization"] = "Bearer ..." }
----@param cb function Function callback(stdout, stderr)
+---@param cb function Function callback(body, err)
 function M.http_get(url, headers, cb)
-  local args = { "curl", "-sSL", url }
+  local opts = {
+    headers = headers or {},
+    retry = 3,
+  }
 
-  if headers then
-    for k, v in pairs(headers) do
-      table.insert(args, "-H")
-      table.insert(args, k .. ": " .. v)
-    end
-  end
-
-  vim.system(args, { text = true }, function(obj)
+  vim.net.request(url, opts, function(err, res)
     vim.schedule(function()
-      if obj.code ~= 0 then
-        local stderr_clean = obj.stderr and vim.trim(obj.stderr) or ""
-        local error_msg = (stderr_clean ~= "") and stderr_clean
-          or ("Connection error (Code " .. obj.code .. ")")
-        cb(nil, error_msg)
+      if err then
+        cb(nil, err)
+      elseif res and res.body then
+        cb(res.body, nil)
       else
-        cb(obj.stdout, nil)
+        cb(nil, "Unknown error: No response body")
+      end
+    end)
+  end)
+end
+
+---Downloads a file asynchronously using Neovim's native vim.net.request
+---@param url string The file URL to download
+---@param filename string The full destination path on disk
+---@param opts table|nil Table with optional fields: { callback = fun(success: boolean) }
+function M.download_file(url, filename, opts)
+  opts = opts or {}
+  local short_name = vim.fn.fnamemodify(filename, ":t")
+
+  M.notify("Starting download: " .. short_name)
+
+  vim.net.request(url, { outpath = filename, retry = 3 }, function(err, _)
+    vim.schedule(function()
+      if err then
+        M.notify_err("Download failed: " .. tostring(err))
+        if opts.callback then
+          opts.callback(false)
+        end
+      else
+        M.notify("Downloaded: " .. short_name)
+        if opts.callback then
+          opts.callback(true)
+        end
       end
     end)
   end)

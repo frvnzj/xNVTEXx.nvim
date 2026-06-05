@@ -1,5 +1,7 @@
 local M = {}
 
+local u = require("xNVTEXx.utils")
+
 local CTAN_MIRROR = "https://mirrors.mit.edu/CTAN"
 local CTAN_API_BASE = "https://www.ctan.org/json/2.0"
 local CACHE_DIR = "ctan_docs"
@@ -10,26 +12,6 @@ local FILE_ICONS = {
   html = " ",
   txt = " ",
 }
-
----@param msg string
----@param level integer|nil
-local function notify(msg, level)
-  vim.notify("xCTANx: " .. msg, level or vim.log.levels.INFO)
-end
-
----@param url string
----@param cb function
-local function http_get(url, cb)
-  vim.system({ "curl", "-sSL", url }, { text = true }, function(obj)
-    vim.schedule(function()
-      if obj.code ~= 0 then
-        cb(nil, "Error fetching data: " .. obj.code)
-      else
-        cb(obj.stdout, nil)
-      end
-    end)
-  end)
-end
 
 ---@param doc_path string
 ---@return string URL
@@ -69,13 +51,13 @@ end
 
 ---@param url string
 local function open_pdf(url)
-  notify("Opening PDF with Zathura...")
+  u.notify("Opening PDF with Zathura...")
   vim.system({ "zathura", url }, { detach = true })
 end
 
 ---@param url string
 local function open_html(url)
-  notify("Opening in browser...")
+  u.notify("Opening in browser...")
   vim.system({ "xdg-open", url }, { detach = true })
 end
 
@@ -86,17 +68,15 @@ local function open_text_document(url, path)
   local filename = generate_cache_filename(path)
   local tmp_file = cache_dir .. filename
 
-  notify("Downloading document...")
-
-  vim.system({ "curl", "-sSL", "-o", tmp_file, url }, {}, function(obj)
-    vim.schedule(function()
-      if obj.code == 0 and vim.fn.filereadable(tmp_file) == 1 then
+  u.download_file(url, tmp_file, {
+    callback = function(success)
+      if success and vim.fn.filereadable(tmp_file) == 1 then
         vim.cmd("view " .. vim.fn.fnameescape(tmp_file))
       else
-        notify("Error downloading: " .. url, vim.log.levels.ERROR)
+        u.notify_err("Could not open downloaded document: " .. filename)
       end
-    end)
-  end)
+    end,
+  })
 end
 
 ---@param url string
@@ -112,18 +92,18 @@ local function open_document(url, path)
   elseif ext == "md" or ext == "txt" or is_readme then
     open_text_document(url, path)
   else
-    notify("Unsupported format: " .. ext, vim.log.levels.WARN)
+    u.notify_warn("Unsupported format: " .. ext)
   end
 end
 
 ---@param cb function
 local function fetch_package_list(cb)
-  http_get(CTAN_API_BASE .. "/packages", function(body, err)
+  u.http_get(CTAN_API_BASE .. "/packages", nil, function(body, err)
     if err or not body then
       return cb(nil, err or "No response body")
     end
 
-    local ok, packages = pcall(vim.fn.json_decode, body)
+    local ok, packages = pcall(vim.json.decode, body)
     if not ok or not packages then
       return cb(nil, "Error decoding JSON response")
     end
@@ -135,12 +115,12 @@ end
 ---@param package_key string
 ---@param cb function
 local function fetch_package_docs(package_key, cb)
-  http_get(CTAN_API_BASE .. "/pkg/" .. package_key, function(body, err)
+  u.http_get(CTAN_API_BASE .. "/pkg/" .. package_key, nil, function(body, err)
     if err or not body then
       return cb(nil, err or "Empty response")
     end
 
-    local ok, pkg_data = pcall(vim.fn.json_decode, body)
+    local ok, pkg_data = pcall(vim.json.decode, body)
     if not ok or not pkg_data or not pkg_data.documentation then
       return cb(nil, "No documentation available")
     end
@@ -190,11 +170,11 @@ local function format_doc_item(item)
 end
 
 function M.xSEARCH_CTANx()
-  notify("Fetching package list...")
+  u.notify("Fetching package list...")
 
   fetch_package_list(function(packages, err)
     if err or not packages then
-      return notify(err or "Failed to fetch packages", vim.log.levels.ERROR)
+      return u.notify_err(err or "Failed to fetch packages")
     end
 
     local package_list = build_package_list(packages)
@@ -207,10 +187,10 @@ function M.xSEARCH_CTANx()
         return
       end
 
-      notify("Fetching documentation...")
+      u.notify("Fetching documentation...")
       fetch_package_docs(selected.key, function(docs, doc_err)
         if doc_err or not docs then
-          return notify(doc_err or "No documentation found", vim.log.levels.ERROR)
+          return u.notify_err(doc_err or "No documentation found")
         end
 
         local doc_list = build_doc_list(docs)

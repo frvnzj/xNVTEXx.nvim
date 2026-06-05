@@ -63,7 +63,7 @@ local function safe_json_decode(json_str)
     return nil, "Empty JSON"
   end
 
-  local ok, result = pcall(vim.fn.json_decode, json_str)
+  local ok, result = pcall(vim.json.decode, json_str)
   if not ok then
     return nil, "JSON decode error: " .. tostring(result)
   end
@@ -113,32 +113,6 @@ local function extract_article_title(article)
 end
 
 local handle_article_actions
-
-local function download_file(url, filename, opts)
-  opts = opts or {}
-
-  local curl_args = { "curl", "-L", "-o", filename, url }
-
-  u.notify("Starting download: " .. vim.fn.fnamemodify(filename, ":t"))
-
-  vim.system(curl_args, { detach = opts.detach ~= false }, function(obj)
-    vim.schedule(function()
-      if obj.code == 0 then
-        u.notify("Downloaded: " .. vim.fn.fnamemodify(filename, ":t"))
-
-        if opts.callback then
-          opts.callback(true)
-        end
-      else
-        local detail = obj.stderr or string.format("Code %d", obj.code)
-        u.notify_err("Download failed: " .. detail)
-        if opts.callback then
-          opts.callback(false)
-        end
-      end
-    end)
-  end)
-end
 
 local function handle_bibtex(article)
   u.http_get(
@@ -233,7 +207,7 @@ local function handle_pdf(article, pdf_url)
         handle_article_actions(article)
       end, 100)
     elseif choice == "Download and view PDF" or choice == "Only download PDF" then
-      download_file(pdf_url, filename, {
+      u.download_file(pdf_url, filename, {
         callback = function(success)
           if success and choice == "Download and view PDF" then
             vim.system({ "zathura", filename }, { detach = true })
@@ -258,7 +232,7 @@ local function handle_epub(article, epub_url)
   local download_dir = get_media_target_dir()
   local filename = vim.fs.joinpath(download_dir, clean_title .. ".epub")
 
-  download_file(epub_url, filename, {
+  u.download_file(epub_url, filename, {
     callback = function(success)
       if success then
         vim.defer_fn(function()
